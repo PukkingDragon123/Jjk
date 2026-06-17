@@ -1,0 +1,157 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+  <meta name="theme-color" content="#111016" />
+  <title>呪術 · JUJUTSU WEB — Cursed Energy Camera</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Bangers&family=Permanent+Marker&family=Noto+Sans+JP:wght@700;900&family=Rajdhani:wght@500;600;700&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="css/style.css" />
+</head>
+<body>
+  <!-- ===================== LOADING ===================== -->
+  <div id="boot" class="boot">
+    <div class="boot-glyph">呪</div>
+    <div class="boot-title">JUJUTSU&nbsp;WEB</div>
+    <div class="boot-bar"><span id="bootBar"></span></div>
+    <div id="bootMsg" class="boot-msg">summoning cursed energy…</div>
+  </div>
+
+  <!-- ===================== MENU ===================== -->
+  <main id="menu" class="menu hidden">
+    <div class="menu-bg"></div>
+    <div class="spray s1"></div><div class="spray s2"></div>
+
+    <header class="menu-head">
+      <div class="logo">
+        <span class="logo-jp">呪術廻戦</span>
+        <span class="logo-en">JUJUTSU WEB</span>
+        <span class="logo-sub">cursed energy, on camera ✦ fan-made</span>
+      </div>
+      <div id="rankBadge" class="rank-badge"><!-- JS --></div>
+    </header>
+
+    <section class="char-select">
+      <h2 class="section-title">pick your sorcerer</h2>
+      <div id="charGrid" class="char-grid"><!-- JS --></div>
+    </section>
+
+    <section class="modes">
+      <button class="mode-btn ranked" data-mode="ranked">
+        <span class="tape"></span>
+        <span class="mode-jp">格付戦</span>
+        <span class="mode-en">RANKED MATCH</span>
+        <small>auto-matchmake a real opponent · climb the grades</small>
+        <span class="xplay">✦ cross-play</span>
+      </button>
+      <button class="mode-btn" data-mode="versus">
+        <span class="mode-jp">領域</span>
+        <span class="mode-en">FIGHT A FRIEND</span>
+        <small>share a room code · any device</small>
+        <span class="xplay">✦ cross-play</span>
+      </button>
+      <button class="mode-btn" data-mode="solo">
+        <span class="mode-jp">修行</span>
+        <span class="mode-en">TRAINING</span>
+        <small>unleash techniques &amp; snap cursed photos</small>
+      </button>
+      <button class="mode-btn ghost" id="howToBtn">
+        <span class="mode-jp">術式</span>
+        <span class="mode-en">how to play</span>
+      </button>
+    </section>
+    <footer class="menu-foot">fan project ✦ not affiliated with the official franchise ✦ made for fun</footer>
+  </main>
+
+  <!-- ===================== APP / STAGE ===================== -->
+  <div id="stage" class="stage hidden">
+    <video id="video" playsinline autoplay muted></video>
+    <canvas id="fx"></canvas>
+
+    <!-- top HUD -->
+    <div class="hud hud-top">
+      <button id="backBtn" class="icon-btn" title="Back">⟵</button>
+      <div class="char-tag">
+        <img id="hudAvatar" class="hud-avatar" alt="" />
+        <span id="hudCharGlyph">無</span><span id="hudCharName">—</span>
+      </div>
+      <div class="ce-wrap" title="Cursed Energy">
+        <div class="ce-label">CURSED ENERGY</div>
+        <div class="ce-bar"><span id="ceFill"></span></div>
+      </div>
+      <div id="fps" class="fps">-- fps</div>
+    </div>
+
+    <!-- versus opponent panel -->
+    <div id="versusPanel" class="versus-panel hidden">
+      <div class="opp-head"><span id="oppName">Opponent</span><div class="hp-bar"><span id="oppHp"></span></div></div>
+      <video id="oppVideo" playsinline autoplay></video>
+      <div class="self-head"><span>You</span><div class="hp-bar self"><span id="selfHp"></span></div></div>
+    </div>
+
+    <div id="hint" class="hint"></div>
+    <div id="techFlash" class="tech-flash"></div>
+
+    <!-- bottom HUD -->
+    <div class="hud hud-bottom">
+      <button id="cloakBtn" class="pill" title="Cursed cloak (body aura)">🜂 cloak</button>
+      <button id="domainBtn" class="pill domain" disabled title="Domain Expansion (needs full energy)">領域展開</button>
+      <button id="captureBtn" class="capture" title="Capture cursed photo">◉</button>
+      <button id="soundBtn" class="pill" title="Sound">🔊</button>
+      <button id="mirrorBtn" class="pill" title="Mirror camera">⇋</button>
+    </div>
+
+    <div id="gallery" class="gallery"></div>
+  </div>
+
+  <!-- ===================== VERSUS LOBBY ===================== -->
+  <div id="lobby" class="modal hidden">
+    <div class="modal-card">
+      <span class="card-tape"></span>
+      <h2>fight a friend</h2>
+      <p class="muted">share a room code. both need a camera. runs peer-to-peer — works phone↔laptop.</p>
+      <div class="lobby-row"><button id="createRoom" class="mode-btn ranked"><span class="mode-en">create room</span></button></div>
+      <div class="lobby-or">— or —</div>
+      <div class="lobby-row join">
+        <input id="roomInput" maxlength="8" placeholder="ROOM CODE" autocomplete="off" />
+        <button id="joinRoom" class="mode-btn"><span class="mode-en">join</span></button>
+      </div>
+      <div id="lobbyCode" class="lobby-code hidden">
+        your code:&nbsp;<b id="codeText">----</b>
+        <button id="copyCode" class="mini">copy</button>
+        <div class="muted small">waiting for opponent…</div>
+      </div>
+      <div id="lobbyStatus" class="lobby-status"></div>
+      <button id="lobbyClose" class="mini close">✕</button>
+    </div>
+  </div>
+
+  <!-- ===================== RANKED QUEUE ===================== -->
+  <div id="queue" class="modal hidden">
+    <div class="modal-card">
+      <span class="card-tape"></span>
+      <h2>ranked match</h2>
+      <div id="queueRank" class="queue-rank"></div>
+      <div class="queue-spinner"><span></span><span></span><span></span></div>
+      <div id="queueStatus" class="lobby-status">finding an opponent…</div>
+      <p class="muted small">serverless cross-play matchmaking — pairs you with anyone else queueing right now, on any device.</p>
+      <button id="queueClose" class="mini close">✕</button>
+    </div>
+  </div>
+
+  <!-- ===================== HOW TO PLAY ===================== -->
+  <div id="help" class="modal hidden">
+    <div class="modal-card wide">
+      <span class="card-tape"></span>
+      <h2>術式 · how to play</h2>
+      <div id="helpBody" class="help-body"></div>
+      <button id="helpClose" class="mode-btn ranked"><span class="mode-en">got it</span></button>
+    </div>
+  </div>
+
+  <script>window.__peerSrc = "https://unpkg.com/peerjs@1.5.4/dist/peerjs.min.js";</script>
+  <script type="module" src="js/main.js"></script>
+</body>
+</html>

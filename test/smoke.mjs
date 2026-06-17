@@ -1,88 +1,87 @@
-// Headless smoke test: boots the app with a fake camera, exercises solo mode +
-// a technique cast + the versus lobby, and fails on any uncaught page error.
+// Headless smoke test: boots with a fake camera, exercises campaign (story +
+// enemy), spell casting via the spellbook, ranked queue and versus lobby.
 const PW = process.env.PW_PATH || "/opt/node22/lib/node_modules/playwright/index.js";
 const pw = await import(PW);
 const chromium = pw.chromium || pw.default?.chromium;
-
 const BASE = process.env.BASE || "http://localhost:8099/";
-const errors = [];
-const logs = [];
+const errors = [], logs = [];
 
 const browser = await chromium.launch({
-  args: [
-    "--use-fake-device-for-media-stream",
-    "--use-fake-ui-for-media-stream",
-    "--autoplay-policy=no-user-gesture-required",
-  ],
+  args: ["--use-fake-device-for-media-stream", "--use-fake-ui-for-media-stream", "--autoplay-policy=no-user-gesture-required"],
 });
-const page = await browser.newContext().then((c) => c.newPage());
+const page = await (await browser.newContext()).newPage();
 page.on("pageerror", (e) => errors.push("PAGEERROR: " + e.message));
 page.on("console", (m) => { if (m.type() === "error") errors.push("CONSOLE: " + m.text()); logs.push(m.type() + ": " + m.text()); });
 
 try {
   await page.goto(BASE, { waitUntil: "domcontentloaded" });
-
-  // boot -> menu
   await page.waitForSelector("#menu:not(.hidden)", { timeout: 20000 });
   console.log("✓ menu visible");
-  await page.waitForTimeout(500);
+  await page.waitForTimeout(450);
   await page.screenshot({ path: "test/shot-menu.png" });
 
-  // ranked queue modal opens (matchmaking will fail offline, but UI must appear)
+  const cards = await page.$$(".char-card");
+  console.log(`✓ ${cards.length} character cards`);
+
+  // ranked queue opens then close
   await page.click('.mode-btn[data-mode="ranked"]');
   await page.waitForSelector("#queue:not(.hidden)", { timeout: 8000 });
   console.log("✓ ranked queue opens");
-  await page.waitForTimeout(300);
-  await page.screenshot({ path: "test/shot-queue.png" });
   await page.click("#queueClose");
 
-  // pick a character (Gojo card already selected; click Sukuna)
-  const cards = await page.$$(".char-card");
-  if (cards[1]) await cards[1].click();
-  console.log(`✓ ${cards.length} character cards`);
-
-  // enter solo
-  await page.click('.mode-btn[data-mode="solo"]');
-  await page.waitForSelector("#stage:not(.hidden)", { timeout: 10000 });
-  console.log("✓ entered solo stage");
-  await page.waitForTimeout(1200); // let loop spin + camera warm up
-
-  // fire a technique via tap, then a double-tap special
-  const box = await page.$eval("#fx", (el) => { const r = el.getBoundingClientRect(); return { x: r.x + r.width / 2, y: r.y + r.height / 2 }; });
-  await page.mouse.click(box.x, box.y);
-  await page.waitForTimeout(120);
-  await page.mouse.click(box.x - 40, box.y);
-  await page.mouse.click(box.x - 40, box.y); // double-tap special
-  await page.waitForTimeout(600);
-
-  // check particles are alive + fps reading
-  const fps = await page.$eval("#fps", (e) => e.textContent);
-  console.log("✓ fps readout:", fps);
-
-  // domain via button (force energy full first)
-  await page.evaluate(() => { /* domain button may be disabled; just verify it exists */ });
-  await page.screenshot({ path: "test/shot-stage.png" });
-
-  // back to menu, open versus lobby
+  // CAMPAIGN: story -> stage -> enemy -> cast spells
+  await page.click('.mode-btn[data-mode="campaign"]');
+  await page.waitForSelector("#story:not(.hidden)", { timeout: 8000 });
+  console.log("✓ campaign story shows");
+  await page.screenshot({ path: "test/shot-story.png" });
+  await page.click("#storyGo");
+  await page.waitForSelector("#stage:not(.hidden)");
+  await page.waitForSelector("#enemyHud:not(.hidden)", { timeout: 6000 });
+  console.log("✓ campaign stage + enemy HUD");
+  await page.waitForTimeout(900);
+  const spells = await page.$$(".spell");
+  console.log(`✓ spellbook has ${spells.length} spells`);
+  const hpRatio = () => page.$eval("#enemyHp", (e) => e.getBoundingClientRect().width / e.parentElement.getBoundingClientRect().width);
+  const hpBefore = await hpRatio();
+  await page.click(".spell:nth-child(1)"); // single basic — should NOT kill
+  await page.waitForTimeout(350);
+  const hpAfter = await hpRatio();
+  console.log(`✓ enemy HP ${(hpBefore * 100).toFixed(0)}% -> ${(hpAfter * 100).toFixed(0)}% (casting damages enemy)`);
+  if (hpAfter >= hpBefore) throw new Error("casting did not damage enemy");
+  await page.screenshot({ path: "test/shot-campaign.png" });
   await page.click("#backBtn");
   await page.waitForSelector("#menu:not(.hidden)");
+
+  // TRAINING (solo): combo + history + domain
+  await page.click('.mode-btn[data-mode="solo"]');
+  await page.waitForSelector("#stage:not(.hidden)");
+  await page.waitForTimeout(500);
+  await page.click(".spell:nth-child(1)");
+  await page.click(".spell:nth-child(2)"); // basics -> may trigger combo
+  await page.waitForTimeout(250);
+  const histN = await page.$$eval("#history .h", (n) => n.length);
+  console.log(`✓ spell history entries: ${histN}`);
+  if (histN < 2) throw new Error("spell history not recording");
+  await page.click(".spell:nth-child(4)"); // domain (energy starts full)
+  await page.waitForTimeout(700);
+  const fps = await page.$eval("#fps", (e) => e.textContent);
+  console.log("✓ solo combo + domain cast, fps:", fps);
+  await page.screenshot({ path: "test/shot-stage.png" });
+  await page.click("#backBtn");
+
+  // VERSUS lobby
   await page.click('.mode-btn[data-mode="versus"]');
   await page.waitForSelector("#lobby:not(.hidden)", { timeout: 8000 });
   console.log("✓ versus lobby opens");
-  await page.screenshot({ path: "test/shot-lobby.png" });
-
-  await page.waitForTimeout(300);
+  await page.waitForTimeout(200);
 } catch (e) {
   errors.push("TEST-FLOW: " + e.message);
 } finally {
   await browser.close();
 }
 
-// MediaPipe CDN may be blocked in CI; that specific failure is expected (pointer fallback).
 // Non-fatal: blocked CDN (mediapipe/peerjs/fonts) and missing optional art (404).
-// A broken JS module surfaces as a PAGEERROR, which is NOT filtered here.
 const fatal = errors.filter((e) => !/tasks-vision|mediapipe|storage\.googleapis|Failed to fetch|Importing a module|net::ERR|peerjs|unpkg|fonts\.|404|status of 4\d\d/i.test(e));
-if (logs.length) console.log("\n--- page logs ---\n" + logs.slice(-12).join("\n"));
-if (errors.length) console.log("\n--- all errors ---\n" + errors.join("\n"));
-if (fatal.length) { console.error("\n❌ FATAL ERRORS:\n" + fatal.join("\n")); process.exit(1); }
-console.log("\n✅ SMOKE TEST PASSED (no fatal page errors)");
+if (logs.length) console.log("\n--- recent logs ---\n" + logs.slice(-8).join("\n"));
+if (fatal.length) { console.error("\n❌ FATAL:\n" + fatal.join("\n")); process.exit(1); }
+console.log("\n✅ SMOKE TEST PASSED");

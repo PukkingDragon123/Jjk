@@ -1,4 +1,4 @@
-// Turns MediaPipe hand landmarks into high-level cursed-technique gestures.
+// Recognises hand SIGNS from MediaPipe landmarks and casts on a short hold.
 import { LM } from "./tracking.js";
 
 const dist = (a, b) => Math.hypot(a.x - b.x, a.y - b.y);
@@ -13,7 +13,7 @@ function features(points, map) {
   const palmW = Math.max(8, dist(wrist, mMcp));
   const fingerExt = (tip, pip) => dist(px[tip], wrist) > dist(px[pip], wrist) * 1.05;
   const ext = [
-    dist(px[LM.THUMB_TIP], px[LM.INDEX_MCP]) > palmW * 0.85, // thumb
+    dist(px[LM.THUMB_TIP], px[LM.INDEX_MCP]) > palmW * 0.85,
     fingerExt(LM.INDEX_TIP, LM.INDEX_PIP),
     fingerExt(LM.MIDDLE_TIP, LM.MIDDLE_PIP),
     fingerExt(LM.RING_TIP, LM.RING_PIP),
@@ -22,91 +22,48 @@ function features(points, map) {
   const count = ext.filter(Boolean).length;
   const center = avg([px[0], px[5], px[9], px[13], px[17]]);
   const aim = Math.atan2(mMcp.y - wrist.y, mMcp.x - wrist.x);
-  return {
-    px, palmW, ext, count, center, aim, wrist,
-    indexTip: px[LM.INDEX_TIP],
-    open: count >= 4,
-    fist: count <= 1,
-    point: ext[1] && !ext[2] && !ext[3] && !ext[4],
-  };
+  return { px, palmW, ext, count, center, aim, open: count >= 4, fist: count <= 1 };
 }
 
-export class GestureEngine {
-  constructor() {
-    this.prev = {};          // handedness -> {center, t}
-    this.cool = {};          // action -> ready-at time
-    this.specArmed = true;   // two-hand special re-arm
-    this.domainHold = 0;     // seconds both hands clasped
-    this.lastNow = 0;
-  }
+function singleSign(h) {
+  if (h.fist) return "fist";
+  if (h.open) return "open";
+  const [, i, m, r, p] = h.ext;
+  if (i && !m && !r && !p) return "one";
+  if (i && m && !r && !p) return "two";
+  return null;
+}
 
-  ready(action, now, cd) {
-    if ((this.cool[action] || 0) > now) return false;
-    this.cool[action] = now + cd;
-    return true;
-  }
+const CAST_HOLD = 0.42; // seconds to lock a sign
+
+export class GestureEngine {
+  constructor() { this.holdSign = null; this.holdT = 0; this.spent = false; this.lastNow = 0; }
 
   process(result, map, now) {
     const dt = Math.min(0.05, Math.max(0.001, (now - this.lastNow) / 1000));
     this.lastNow = now;
-    const out = { charging: false, chargePos: null, events: [], hands: [] };
+    const out = { hands: [], sign: null, progress: 0, cast: null, pos: null, aim: -Math.PI / 2 };
     const hands = (result.hands || []).map((h) => features(h.points, map));
     out.hands = hands;
-    if (!hands.length) { this.domainHold = 0; return out; }
+    if (!hands.length) { this.holdSign = null; this.holdT = 0; this.spent = false; return out; }
 
-    // velocities (palm-widths per second)
-    hands.forEach((h, i) => {
-      const k = "h" + i;
-      const p = this.prev[k];
-      h.speed = p ? dist(h.center, p.center) / h.palmW / dt : 0; // palm-widths / sec
-      this.prev[k] = { center: h.center, t: now };
-    });
-
-    // ---------- two-hand techniques ----------
+    let sign = null, pos = hands[0].center, aim = hands[0].aim;
     if (hands.length >= 2) {
       const [a, b] = hands;
       const d = dist(a.center, b.center) / ((a.palmW + b.palmW) / 2);
-      const mid = avg([a.center, b.center]);
-      const aim = Math.atan2(
-        Math.sin(a.aim) + Math.sin(b.aim),
-        Math.cos(a.aim) + Math.cos(b.aim)
-      );
-      // SPECIAL: both open, brought close after being apart
-      if (d > 5) this.specArmed = true;
-      if (a.open && b.open && d < 2.2 && this.specArmed && this.ready("special", now, 1.4)) {
-        this.specArmed = false;
-        out.events.push({ type: "special", x: mid.x, y: mid.y, aim });
-      } else if (a.open && b.open && d < 4) {
-        out.charging = true; out.chargePos = mid;
-      }
-      // DOMAIN: hands clasped (close, not both open) held
-      if (d < 2.0 && !(a.open && b.open)) {
-        this.domainHold += dt;
-        out.chargePos = mid; out.charging = true;
-        if (this.domainHold > 0.55 && this.ready("domain", now, 5)) {
-          out.events.push({ type: "domain", x: mid.x, y: mid.y, aim: -Math.PI / 2 });
-          this.domainHold = -2; // lockout
-        }
-      } else {
-        this.domainHold = Math.max(0, this.domainHold);
-        if (d > 2.2) this.domainHold = 0;
-      }
+      if (a.open && b.open && d < 4) { sign = "double"; pos = avg([a.center, b.center]); }
+      else if (d < 2.0) { sign = "pray"; pos = avg([a.center, b.center]); }
     }
+    if (!sign) sign = singleSign(hands[0]);
+    out.sign = sign; out.pos = pos; out.aim = aim;
 
-    // ---------- single-hand techniques ----------
-    for (const h of hands) {
-      if (h.open && h.speed < 4) {
-        out.charging = true;
-        if (!out.chargePos) out.chargePos = h.center;
-      }
-      // thrust detection
-      if (h.speed > 12) {
-        if (h.fist && this.ready("melee", now, 0.5)) {
-          out.events.push({ type: "melee", x: h.center.x, y: h.center.y, aim: h.aim });
-        } else if (h.open && this.ready("blast", now, 0.5)) {
-          out.events.push({ type: "blast", x: h.indexTip.x, y: h.indexTip.y, aim: h.aim });
-        }
-      }
+    if (sign && sign === this.holdSign) this.holdT += dt;
+    else { this.holdSign = sign; this.holdT = 0; this.spent = false; }
+
+    if (sign && !this.spent) out.progress = Math.min(1, this.holdT / CAST_HOLD);
+    if (sign && !this.spent && this.holdT >= CAST_HOLD) {
+      this.spent = true;
+      out.cast = sign;
     }
     return out;
   }

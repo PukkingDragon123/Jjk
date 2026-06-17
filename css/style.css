@@ -87,7 +87,9 @@ body::after{content:"";position:fixed;inset:0;pointer-events:none;z-index:99;opa
 .char-card.sel::after{content:"✓ picked";position:absolute;bottom:8px;right:8px;font-family:var(--marker);
   font-size:.8rem;color:#fff;background:var(--accent);border:2px solid #000;border-radius:6px;padding:1px 7px;transform:rotate(-3deg)}
 
-.modes{display:flex;flex-direction:column;gap:14px;max-width:460px;margin:0 auto}
+.modes{display:flex;flex-direction:column;gap:12px;max-width:460px;margin:0 auto}
+.mode-row{display:flex;gap:12px}
+.mode-row .mode-btn{flex:1}
 .mode-btn{position:relative;display:flex;flex-direction:column;align-items:flex-start;gap:0;
   border:3px solid #000;border-radius:12px;padding:13px 18px;background:#1d1826;color:#fff;
   box-shadow:5px 5px 0 rgba(0,0,0,.5);transition:.12s;text-align:left}
@@ -96,8 +98,8 @@ body::after{content:"";position:fixed;inset:0;pointer-events:none;z-index:99;opa
 .mode-btn .mode-jp{font-family:"Noto Sans JP";font-weight:700;color:#cfc7dd;font-size:.9rem}
 .mode-btn .mode-en{font-family:var(--display);font-size:1.5rem;letter-spacing:.03em}
 .mode-btn small{color:var(--muted)}
-.mode-btn.ranked{background:linear-gradient(100deg,#3a1030,#2a1444);border-color:#000}
-.mode-btn.ranked .mode-en{color:var(--gold)}
+.mode-btn.primary{background:linear-gradient(100deg,#3a1030,#2a1444);border-color:#000}
+.mode-btn.primary .mode-en{color:var(--gold)}
 .mode-btn.ghost{box-shadow:none;border-style:dashed;background:transparent}
 .mode-btn .xplay{position:absolute;top:10px;right:12px;font-family:var(--marker);font-size:.72rem;
   color:#16121c;background:var(--gold);border:2px solid #000;border-radius:6px;padding:1px 7px;transform:rotate(3deg)}
@@ -197,8 +199,64 @@ body::after{content:"";position:fixed;inset:0;pointer-events:none;z-index:99;opa
 .help-row b{display:block;font-family:var(--display);letter-spacing:.03em;font-size:1.05rem}
 .help-row p{margin:1px 0 0;color:var(--muted);font-size:.85rem}
 
+/* ===== spellbook ===== */
+.spellbook{position:absolute;left:0;right:0;bottom:84px;display:flex;justify-content:center;gap:8px;
+  z-index:6;padding:0 8px;flex-wrap:wrap}
+.spell{position:relative;width:74px;min-height:64px;border:3px solid #000;border-radius:12px;background:#16121c;
+  color:#fff;display:flex;flex-direction:column;align-items:center;gap:1px;padding:6px 4px 9px;
+  box-shadow:3px 3px 0 rgba(0,0,0,.5);transition:.1s;overflow:hidden}
+.spell:active{transform:translateY(2px)}
+.spell .sgn{font-size:1.55rem;line-height:1}
+.spell .snm{font-size:.6rem;font-weight:700;text-align:center;line-height:1.05;color:#d9d2e6}
+.spell .tag{position:absolute;top:3px;right:4px;font-size:.5rem;font-weight:800;letter-spacing:.04em;
+  color:#16121c;background:var(--accent);border-radius:4px;padding:0 4px}
+.spell .ring{position:absolute;left:0;bottom:0;height:4px;width:100%;background:rgba(255,255,255,.12)}
+.spell .ring span{display:block;height:100%;width:0%;background:var(--accent)}
+.spell.active{border-color:var(--accent);box-shadow:0 0 0 2px var(--accent),3px 3px 0 rgba(0,0,0,.5)}
+.spell.locked{opacity:.42}
+.spell.flash-cast{animation:spellCast .4s ease}
+@keyframes spellCast{0%{transform:scale(1)}40%{transform:scale(1.12);background:var(--accent)}100%{transform:scale(1)}}
+
+.sign-now{position:absolute;left:50%;bottom:164px;transform:translateX(-50%);z-index:6;width:58px;height:58px;
+  border-radius:50%;display:grid;place-items:center;font-size:1.7rem;opacity:0;transition:opacity .15s;
+  background:conic-gradient(var(--gold) calc(var(--p,0)*360deg),rgba(255,255,255,.12) 0);
+  border:3px solid #000;box-shadow:3px 3px 0 rgba(0,0,0,.5)}
+.sign-now.show{opacity:1}
+.sign-now b{width:46px;height:46px;border-radius:50%;background:#16121c;display:grid;place-items:center}
+
+/* ===== spell history ===== */
+.history{position:absolute;left:8px;top:108px;display:flex;flex-direction:column;gap:5px;z-index:5;
+  pointer-events:none;width:160px}
+.history .h{display:flex;align-items:center;gap:6px;background:rgba(8,6,12,.7);border:2px solid #000;
+  border-radius:8px;padding:3px 7px;font-size:.74rem;font-weight:700;animation:hin .3s ease}
+.history .h .he{font-size:1rem}
+.history .h.combo{border-color:var(--gold);color:var(--gold);box-shadow:2px 2px 0 rgba(0,0,0,.5)}
+@keyframes hin{from{transform:translateX(-20px);opacity:0}to{transform:translateX(0);opacity:1}}
+
+/* ===== enemy ===== */
+.enemy-hud{position:absolute;top:60px;left:50%;transform:translateX(-50%);z-index:5;display:flex;align-items:center;
+  gap:10px;background:rgba(8,6,12,.75);border:3px solid #000;border-radius:12px;padding:7px 14px 7px 10px;
+  box-shadow:4px 4px 0 rgba(0,0,0,.5);min-width:230px}
+.enemy-emoji{font-size:1.9rem;animation:bob 2s ease-in-out infinite}
+@keyframes bob{50%{transform:translateY(-5px)}}
+.enemy-info{flex:1;display:flex;flex-direction:column;gap:3px}
+.enemy-info #enemyName{font-family:var(--display);font-size:1.1rem;letter-spacing:.03em}
+.hp-bar.enemy span{background:linear-gradient(90deg,#ff3b4e,#b14bff)}
+.enemy-warn{position:absolute;top:100%;left:50%;transform:translateX(-50%);margin-top:6px;white-space:nowrap;
+  font-family:var(--marker);color:#ff5a5a;text-shadow:1px 1px 0 #000;opacity:0}
+.enemy-warn.show{opacity:1;animation:warnpulse .4s infinite alternate}
+@keyframes warnpulse{to{transform:translateX(-50%) scale(1.08)}}
+
+/* ===== story ===== */
+.story-card{text-align:center}
+.story-glyph{font-family:"Noto Sans JP";font-weight:900;font-size:3.4rem;color:var(--red);
+  text-shadow:3px 3px 0 #000;margin-bottom:4px}
+.story-text{color:#e7e2f0;line-height:1.5;font-size:1.02rem;margin:8px 0 18px;white-space:pre-line}
+
 @media (max-width:520px){
   .logo-en{font-size:2.2rem}.logo-jp{font-size:1.6rem}
-  .versus-panel{width:108px}.capture{width:58px;height:58px}
+  .versus-panel{width:104px;top:120px}.capture{width:54px;height:54px}
   .menu-head{gap:10px}.rank-badge{transform:rotate(1deg)}
+  .spell{width:62px;min-height:58px}.spell .sgn{font-size:1.3rem}
+  .enemy-hud{min-width:200px}.history{width:128px;top:150px}
 }

@@ -313,3 +313,14 @@ body::after{content:"";position:fixed;inset:0;pointer-events:none;z-index:46;opa
 .badge{box-shadow:0 0 16px rgba(227,38,47,.45),0 2px 4px rgba(0,0,0,.6)}
 .mode-btn:hover{box-shadow:-4px 0 16px -4px var(--teal)}
 .banner{text-shadow:0 0 30px var(--red),0 6px 0 rgba(0,0,0,.3)}
+
+/* polished character select cards */
+.char-card .cgrade{position:absolute;top:6px;left:6px;font-size:.58rem;font-weight:800;color:#04121a;background:var(--accent);
+  padding:1px 7px;text-transform:uppercase;letter-spacing:.05em;z-index:2}
+.char-card .label{gap:0;padding:9px 11px 11px}
+.char-card .ctitle{font-size:.66rem;color:var(--muted);line-height:1.2;margin-top:1px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.char-card .csig{font-size:.66rem;color:var(--accent);font-weight:700;margin-top:4px;text-transform:uppercase;letter-spacing:.03em}
+
+/* calmer neon (less busy) */
+body::after{opacity:.12}
+.menu-bg::after{opacity:.38}

@@ -31,9 +31,9 @@ const els = {
   combo: $("#combo"), comboN: $("#comboN"), statusTag: $("#statusTag"), banner: $("#banner"),
   cutin: $("#cutin"), cutinInit: $("#cutinInit"), cutinName: $("#cutinName"),
   oppVideo: $("#oppVideo"), fps: $("#fps"),
-  hint: $("#hint"), techFlash: $("#techFlash"), signNow: $("#signNow"),
+  hint: $("#hint"), techFlash: $("#techFlash"),
   qte: $("#qte"), qteSign: $("#qteSign"), qteLabel: $("#qte .qte-label"),
-  spellbook: $("#spellbook"), history: $("#history"), gallery: $("#gallery"),
+  spellbook: $("#spellbook"), gallery: $("#gallery"),
   lobby: $("#lobby"), createRoom: $("#createRoom"), joinRoom: $("#joinRoom"), roomInput: $("#roomInput"),
   lobbyCode: $("#lobbyCode"), codeText: $("#codeText"), copyCode: $("#copyCode"), lobbyStatus: $("#lobbyStatus"), lobbyClose: $("#lobbyClose"),
   queue: $("#queue"), queueStatus: $("#queueStatus"), queueRank: $("#queueRank"), queueClose: $("#queueClose"),
@@ -62,7 +62,7 @@ const state = {
 };
 function rebuildBook() { state.book = loadout.activeBook(state.char); }
 const bookBySign = (sign) => state.book.find((m) => m.sign === sign);
-let stream = null, versus = null, spellSlots = [], petals = [];
+let stream = null, versus = null, spellSlots = [];
 const artCache = {};
 let lastFrame = performance.now(), fpsT = 0, fpsN = 0;
 
@@ -101,8 +101,9 @@ function buildCharGrid() {
     card.className = "char-card" + (i === 0 ? " sel" : "");
     card.style.setProperty("--accent", c.accent);
     card.innerHTML = `<div class="sticker"><div class="art-wrap"><div class="glyph">${c.initial}</div>
-      <img class="art" alt="${c.name}" src="${c.art}" /></div>
-      <div class="label"><span class="cname">${c.name}</span><span class="grade">${c.grade}</span></div></div>`;
+      <img class="art" alt="${c.name}" src="${c.art}" /><span class="cgrade">${c.grade}</span></div>
+      <div class="label"><span class="cname">${c.name}</span><span class="ctitle">${c.title}</span>
+      <span class="csig">★ ${c.ultimate.short}</span></div></div>`;
     const img = card.querySelector(".art");
     img.addEventListener("error", () => { img.style.display = "none"; });
     card.onclick = () => {
@@ -215,8 +216,8 @@ function comboBump(n) {
 async function enterStage(mode) {
   try { await ensureCamera(); } catch (e) { return toast("Camera permission needed 📷"); }
   state.mode = mode; state.ce = 1; state.surge = 0; state.selfHp = 100; state.oppHp = 100; state.matchOver = false;
-  state.invuln = 0; state.history = []; state.recent = []; state.enemyAnim.lunge = 0; state.combo = 0; state.comboT = 0; state.cool = {}; clearQte();
-  particles.clear(); effects.fx.length = 0; renderHistory(); els.combo.classList.remove("show");
+  state.invuln = 0; state.recent = []; state.enemyAnim.lunge = 0; state.combo = 0; state.comboT = 0; state.cool = {}; clearQte();
+  particles.clear(); effects.fx.length = 0; els.combo.classList.remove("show");
   els.menu.classList.add("hidden"); els.stage.classList.remove("hidden");
   els.p2wrap.classList.toggle("hidden", mode === "solo");
   els.oppVideo.classList.toggle("hidden", mode !== "versus");
@@ -260,8 +261,8 @@ function loop(now) {
   if (g.cast) { const m = bookBySign(g.cast); if (m) cast(m, { charged: g.charged }); }
 
   for (const h of g.hands) {
-    if (state.cloak) particles.flame(h.center.x, h.center.y, Math.random() < 0.5 ? "#5aa8ff" : "#bfe3ff", 1.4, 2);
-    else particles.aura(h.center.x, h.center.y, state.char.palette.glow, 1, 1);
+    if (state.cloak) { if (Math.random() < 0.7) particles.flame(h.center.x, h.center.y, "#5aa8ff", 1.3, 1); }
+    else if (Math.random() < 0.5) particles.aura(h.center.x, h.center.y, state.char.palette.glow, 1, 1);
   }
   if (state.mode === "campaign") updateCampaign(dt);
 
@@ -272,7 +273,6 @@ function loop(now) {
 
   ctx.clearRect(0, 0, W, H);
   ctx.save(); ctx.translate(ox, oy);
-  drawPetals(ctx, W, H, dt);
   effects.renderUnder(ctx, W, H);
   if (state.mode === "campaign") drawCurse(ctx, W, H, now);
   drawAura(ctx, g.hands); drawHandRig(ctx, g.hands);
@@ -282,16 +282,9 @@ function loop(now) {
 
   updateBars();
   updateSpellbook(g.sign, g.progress);
-  updateSignNow(g.sign, g.progress);
   fpsN++; fpsT += dt; if (fpsT >= 0.5) { els.fps.textContent = Math.round(fpsN / fpsT) + " fps"; fpsN = 0; fpsT = 0; }
   requestAnimationFrame(loop);
 }
-function updateSignNow(sign, progress) {
-  if (!sign) { els.signNow.classList.remove("show"); return; }
-  els.signNow.classList.add("show"); els.signNow.style.setProperty("--p", progress);
-  els.signNow.innerHTML = `<b>${signOf(sign).emoji}</b>`;
-}
-
 /* ---------- drawing ---------- */
 function drawAura(ctx, hands) {
   if (!hands.length) return;
@@ -308,21 +301,6 @@ function drawAura(ctx, hands) {
   }
   if (style === "ink") { ctx.globalCompositeOperation = "source-over"; for (const h of hands) { ctx.globalAlpha = .5; ctx.fillStyle = "#0c0f22"; ctx.beginPath(); ctx.arc(h.center.x, h.center.y, h.palmW * 1.1, 0, TAU); ctx.fill(); if (Math.random() < .5) particles.aura(h.center.x, h.center.y, pal.b, .8, 1); } ctx.globalAlpha = 1; }
   ctx.restore();
-}
-function newPetal(W, H, seed) {
-  const k = W / 1280;
-  return { x: rnd(0, W), y: seed ? rnd(0, H) : -20, vx: (rnd(-.3, .7) + .2) * k, vy: (rnd(.5, 1.5) + .4) * (H / 720), rot: rnd(0, TAU), vr: rnd(-.04, .04), s: rnd(3, 7) * k + 2, a: rnd(.1, .3), c: "#ff5566" };
-}
-function drawPetals(ctx, W, H, dt) {
-  if (state.mode === "versus") return;
-  if (!petals.length) for (let i = 0; i < 16; i++) petals.push(newPetal(W, H, true));
-  const f = Math.min(3, dt * 60);
-  for (const p of petals) {
-    p.x += p.vx * f; p.y += p.vy * f; p.rot += p.vr * f;
-    if (p.y > H + 24) Object.assign(p, newPetal(W, H, false));
-    ctx.save(); ctx.globalAlpha = p.a; ctx.translate(p.x, p.y); ctx.rotate(p.rot);
-    ctx.fillStyle = p.c; ctx.beginPath(); ctx.ellipse(0, 0, p.s, p.s * .5, 0, 0, TAU); ctx.fill(); ctx.restore();
-  }
 }
 function drawCurse(ctx, W, H, now) {
   if (!state.enemy) return;
@@ -403,14 +381,14 @@ function doCast(move, pos, aim, { incoming = false, fromCharId = null, combo = f
   const bigMove = move.tier === "ultimate" || move.tier === "domain" || combo || charged;
   if (move.kind === "guard") {
     effects.trigger("guard", { x: pos.x, y: pos.y, palette: char.palette, W, H });
-    if (!incoming) { state.invuln = Math.max(state.invuln, 2.4); state.lastTechName = move.name; pushHistory(move, combo); }
+    if (!incoming) { state.invuln = Math.max(state.invuln, 2.4); state.lastTechName = move.name; }
     audio.play(move.sfx || "ui"); flashTech(move.short, char.accent); return true;
   }
   effects.trigger(move.kind, { x: pos.x, y: pos.y, aim, palette: char.palette, W, H, incoming, ...move });
   audio.play(move.sfx || "blue"); flashTech((charged ? "CHARGED " : "") + move.short, char.accent);
   if (!incoming && bigMove) showCutin(move, char, charged);
   if (!incoming) {
-    state.lastTechName = move.name; pushHistory(move, combo);
+    state.lastTechName = move.name;
     if (move.dmg) { state.surge = Math.min(1, state.surge + .1); state.combo++; state.comboT = 2.2; comboBump(state.combo); }
     if (move.tier === "domain") { state.invuln = 3.0; showBanner("DOMAIN EXPANSION"); }
     if (state.mode === "campaign" && state.enemy && !state.enemy.dead && move.dmg) {
@@ -434,11 +412,6 @@ function feedCombo() {
   if (state.recent.length >= 3) { state.recent = []; const f = state.char.comboFinisher; hint("⚡ COMBO · " + f.name); cast(f, { combo: true }); }
 }
 function serialize(m) { return { kind: m.kind, short: m.short, name: m.name, dmg: m.dmg, style: m.style, sub: m.sub, warm: m.warm, water: m.water, barrage: m.barrage, big: m.big }; }
-function pushHistory(move, combo) {
-  state.history.unshift({ emoji: combo ? "🔥" : signOf(move.sign).emoji, name: move.short, combo });
-  state.history = state.history.slice(0, 6); renderHistory();
-}
-function renderHistory() { els.history.innerHTML = state.history.map((h) => `<div class="h${h.combo ? " combo" : ""}"><span class="he">${h.emoji}</span>${h.name}</div>`).join(""); }
 function flashTech(text, color) {
   els.techFlash.textContent = text; els.techFlash.style.color = "#fff";
   els.techFlash.style.textShadow = `0 0 22px ${color}`;

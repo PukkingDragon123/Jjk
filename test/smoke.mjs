@@ -75,10 +75,10 @@ try {
   await page.click(".spell:nth-child(2)");
   await page.click(".spell:nth-child(3)"); // 3 basics -> combo finisher
   await page.waitForTimeout(300);
-  const histN = await page.$$eval("#history .h", (n) => n.length);
-  const comboN = await page.$$eval("#history .h.combo", (n) => n.length);
-  console.log(`✓ history ${histN} entries, combo finishers: ${comboN}`);
-  if (histN < 3) throw new Error("spell history not recording");
+  const comboShown = await page.$eval("#combo", (e) => e.classList.contains("show"));
+  const comboN = await page.$eval("#comboN", (e) => parseInt(e.textContent) || 0);
+  console.log(`✓ combo counter: ${comboN} hits (shown: ${comboShown})`);
+  if (comboN < 2) throw new Error("combo counter not updating");
   await page.click(".spell:nth-child(4)"); // ultimate (spends cursed energy)
   await page.waitForTimeout(700);
   const fps = await page.$eval("#fps", (e) => e.textContent);

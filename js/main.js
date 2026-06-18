@@ -11,7 +11,6 @@ import { composeShot, postShot } from "./capture.js";
 import * as audio from "./audio.js";
 import * as rank from "./rank.js";
 import { STAGES, Enemy, loadProgress, saveProgress } from "./campaign.js";
-import { FaceTracker, drawLook } from "./overlay.js";
 
 const $ = (s) => document.querySelector(s);
 const TAU = Math.PI * 2;
@@ -30,6 +29,7 @@ const els = {
   p1Init: $("#p1Init"), p2Init: $("#p2Init"), p1Avatar: $("#p1Avatar"), p2Avatar: $("#p2Avatar"),
   p2wrap: $("#p2wrap"), specialFill: $("#specialFill"), burstPips: $("#burstPips"),
   combo: $("#combo"), comboN: $("#comboN"), statusTag: $("#statusTag"), banner: $("#banner"),
+  cutin: $("#cutin"), cutinInit: $("#cutinInit"), cutinName: $("#cutinName"),
   oppVideo: $("#oppVideo"), fps: $("#fps"),
   hint: $("#hint"), techFlash: $("#techFlash"), signNow: $("#signNow"),
   qte: $("#qte"), qteSign: $("#qteSign"), qteLabel: $("#qte .qte-label"),
@@ -39,33 +39,31 @@ const els = {
   queue: $("#queue"), queueStatus: $("#queueStatus"), queueRank: $("#queueRank"), queueClose: $("#queueClose"),
   story: $("#story"), storyGlyph: $("#storyGlyph"), storyTitle: $("#storyTitle"), storyText: $("#storyText"), storyGo: $("#storyGo"),
   help: $("#help"), helpBody: $("#helpBody"), helpClose: $("#helpClose"), howToBtn: $("#howToBtn"),
-  lookBtn: $("#lookBtn"), cloakBtn: $("#cloakBtn"), captureBtn: $("#captureBtn"), soundBtn: $("#soundBtn"), mirrorBtn: $("#mirrorBtn"), backBtn: $("#backBtn"),
+  cloakBtn: $("#cloakBtn"), captureBtn: $("#captureBtn"), soundBtn: $("#soundBtn"), mirrorBtn: $("#mirrorBtn"), backBtn: $("#backBtn"),
   customize: $("#customize"), customizeBtn: $("#customizeBtn"), czTabs: $("#czTabs"), czCoins: $("#czCoins"), czSlots: $("#czSlots"), czPool: $("#czPool"), czClose: $("#czClose"),
 };
 
 const ctx = els.fx.getContext("2d");
 const tracker = new Tracker();
-const face = new FaceTracker();
 const gestures = new GestureEngine();
 const particles = new ParticleSystem(1400);
 const effects = new EffectManager(particles);
 
 const state = {
-  mode: "menu", char: CHARACTERS[0], mirror: true, cloak: true, look: true,
-  ce: 1, surge: 0, running: false, matchOver: false, invuln: 0,
+  mode: "menu", char: CHARACTERS[0], mirror: true, cloak: true,
+  ce: 1, surge: 0, running: false, matchOver: false, invuln: 0, cool: {},
   qte: null, curSign: null, swiped: false,
   selfHp: 100, oppHp: 100, oppChar: "gojo", ranked: false,
   aimPos: null, aim: -Math.PI / 2,
   history: [], recent: [], clock: 0, combo: 0, comboT: 0,
   stageIndex: 0, enemy: null, enemyAnim: { lunge: 0 },
-  book: [], czChar: "gojo", czSlot: 0, faceEyes: null,
+  book: [], czChar: "gojo", czSlot: 0,
   lastTechName: "", gallery: [],
 };
 function rebuildBook() { state.book = loadout.activeBook(state.char); }
 const bookBySign = (sign) => state.book.find((m) => m.sign === sign);
-let stream = null, versus = null, spellSlots = [], petals = [], faceInit = false;
+let stream = null, versus = null, spellSlots = [], petals = [];
 const artCache = {};
-function ensureFace() { if (!faceInit && state.look) { faceInit = true; face.init(); } }
 let lastFrame = performance.now(), fpsT = 0, fpsN = 0;
 
 /* ---------- boot ---------- */
@@ -138,18 +136,22 @@ function buildSpellbook() {
     sl.className = "spell"; sl.style.setProperty("--accent", state.char.accent);
     const tag = m.tier === "ultimate" ? "ULT" : m.tier === "domain" ? "DOM" : m.tier === "utility" ? "DEF" : "";
     const lv = (m.lvl || 1) > 1 ? `<span class="lv">L${m.lvl}</span>` : "";
-    sl.innerHTML = `${tag ? `<span class="tag">${tag}</span>` : ""}${lv}<span class="sgn">${signOf(m.sign).emoji}</span>
+    sl.innerHTML = `<span class="cd"></span>${tag ? `<span class="tag">${tag}</span>` : ""}${lv}<span class="sgn">${signOf(m.sign).emoji}</span>
       <span class="snm">${m.short}</span><span class="ring"><span></span></span>`;
     sl.onclick = () => cast(m, { tap: true });
     els.spellbook.appendChild(sl);
-    spellSlots.push({ el: sl, move: m, ring: sl.querySelector(".ring span") });
+    spellSlots.push({ el: sl, move: m, ring: sl.querySelector(".ring span"), cd: sl.querySelector(".cd") });
   }
 }
 function updateSpellbook(activeSign, progress) {
   for (const s of spellSlots) {
-    const locked = s.move.tier === "domain" ? state.surge < 1 : (s.move.cost && state.ce < s.move.cost);
-    s.el.classList.toggle("locked", !!locked);
-    const active = activeSign && s.move.sign === activeSign;
+    const cd = state.cool[s.move.id];
+    const remain = cd ? Math.max(0, cd.until - state.clock) : 0;
+    const cooling = remain > 0.02;
+    s.cd.style.height = (cooling && cd.total ? (remain / cd.total) * 100 : 0) + "%";
+    const lockRes = s.move.tier === "domain" ? state.surge < 1 : (s.move.cost && state.ce < s.move.cost);
+    s.el.classList.toggle("locked", !!lockRes || cooling);
+    const active = activeSign && s.move.sign === activeSign && !cooling;
     s.el.classList.toggle("active", !!active);
     s.ring.style.width = (active ? progress * 100 : 0) + "%";
   }
@@ -213,9 +215,8 @@ function comboBump(n) {
 async function enterStage(mode) {
   try { await ensureCamera(); } catch (e) { return toast("Camera permission needed 📷"); }
   state.mode = mode; state.ce = 1; state.surge = 0; state.selfHp = 100; state.oppHp = 100; state.matchOver = false;
-  state.invuln = 0; state.history = []; state.recent = []; state.enemyAnim.lunge = 0; state.combo = 0; state.comboT = 0; clearQte();
+  state.invuln = 0; state.history = []; state.recent = []; state.enemyAnim.lunge = 0; state.combo = 0; state.comboT = 0; state.cool = {}; clearQte();
   particles.clear(); effects.fx.length = 0; renderHistory(); els.combo.classList.remove("show");
-  if (state.look) ensureFace();
   els.menu.classList.add("hidden"); els.stage.classList.remove("hidden");
   els.p2wrap.classList.toggle("hidden", mode === "solo");
   els.oppVideo.classList.toggle("hidden", mode !== "versus");
@@ -251,18 +252,12 @@ function loop(now) {
   if (g.pos) { state.aimPos = g.pos; state.aim = g.aim; }
   state.curSign = g.sign; state.swiped = g.swipe;
 
-  state.faceEyes = null;
-  if (state.look && face.mode === "face" && els.video.readyState >= 2) {
-    const f = face.detect(els.video, now);
-    if (f && f.keypoints && f.keypoints.length >= 2) { const m = makeMap(); state.faceEyes = { R: m(f.keypoints[0]), L: m(f.keypoints[1]) }; }
-  }
-
   if (!effects.domainActive) state.ce = Math.min(1, state.ce + dt * 0.16);
   state.surge = Math.min(1, state.surge + dt * 0.04);
   if (state.invuln > 0) state.invuln -= dt;
   if (state.comboT > 0) { state.comboT -= dt; if (state.comboT <= 0) { state.combo = 0; els.combo.classList.remove("show"); } }
   if (g.swipe) dodge();
-  if (g.cast) { const m = bookBySign(g.cast); if (m) cast(m, {}); }
+  if (g.cast) { const m = bookBySign(g.cast); if (m) cast(m, { charged: g.charged }); }
 
   for (const h of g.hands) {
     if (state.cloak) particles.flame(h.center.x, h.center.y, Math.random() < 0.5 ? "#5aa8ff" : "#bfe3ff", 1.4, 2);
@@ -282,7 +277,6 @@ function loop(now) {
   if (state.mode === "campaign") drawCurse(ctx, W, H, now);
   drawAura(ctx, g.hands); drawHandRig(ctx, g.hands);
   particles.render(ctx);
-  if (state.faceEyes) drawLook(ctx, state.faceEyes.R, state.faceEyes.L, state.char.look);
   effects.render(ctx, W, H);
   ctx.restore();
 
@@ -382,40 +376,57 @@ function drawHandRig(ctx, hands) {
 }
 
 /* ---------- casting ---------- */
+function cdFor(move, charged) {
+  let cd = move.tier === "ultimate" ? 6 : move.tier === "domain" ? 2 : move.kind === "guard" ? 5 : 0.7;
+  return charged ? cd * 1.6 : cd;
+}
 function cast(move, opts = {}) {
   if (!move) return;
   const W = els.fx.width, H = els.fx.height;
   const pos = state.aimPos || { x: W / 2, y: H * .42 };
-  if (!doCast(move, pos, state.aim, { combo: opts.combo })) return;
+  const charged = opts.charged && move.tier !== "domain" && move.kind !== "guard";
+  const m = charged ? { ...move, dmg: Math.round((move.dmg || 0) * 1.6), big: true, cost: (move.cost || 0) * 1.4 } : move;
+  if (!doCast(m, pos, state.aim, { combo: opts.combo, charged })) return;
   flashSlot(move.id);
   if (!opts.combo && move.tier === "basic") feedCombo();
 }
-function doCast(move, pos, aim, { incoming = false, fromCharId = null, combo = false } = {}) {
+function doCast(move, pos, aim, { incoming = false, fromCharId = null, combo = false, charged = false } = {}) {
   const char = incoming ? getCharacter(fromCharId || state.oppChar) : state.char;
   if (!incoming) {
+    const c = state.cool[move.id];
+    if (c && c.until - state.clock > 0.02) { hint(move.short + " recharging…"); return false; }
     if (move.tier === "domain") { if (state.surge < 1) { hint("Domain needs a full BURST meter"); return false; } state.surge = 0; }
     else { const cost = move.cost || 0; if (cost && state.ce < cost) { hint("Not enough cursed energy for " + move.short); return false; } state.ce = Math.max(0, state.ce - cost); }
+    const cd = cdFor(move, charged); state.cool[move.id] = { until: state.clock + cd, total: cd };
   }
   const W = els.fx.width, H = els.fx.height;
+  const bigMove = move.tier === "ultimate" || move.tier === "domain" || combo || charged;
   if (move.kind === "guard") {
     effects.trigger("guard", { x: pos.x, y: pos.y, palette: char.palette, W, H });
     if (!incoming) { state.invuln = Math.max(state.invuln, 2.4); state.lastTechName = move.name; pushHistory(move, combo); }
     audio.play(move.sfx || "ui"); flashTech(move.short, char.accent); return true;
   }
   effects.trigger(move.kind, { x: pos.x, y: pos.y, aim, palette: char.palette, W, H, incoming, ...move });
-  audio.play(move.sfx || "blue"); flashTech(move.short, char.accent);
+  audio.play(move.sfx || "blue"); flashTech((charged ? "CHARGED " : "") + move.short, char.accent);
+  if (!incoming && bigMove) showCutin(move, char, charged);
   if (!incoming) {
     state.lastTechName = move.name; pushHistory(move, combo);
     if (move.dmg) { state.surge = Math.min(1, state.surge + .1); state.combo++; state.comboT = 2.2; comboBump(state.combo); }
-    if (move.tier === "domain") state.invuln = 2.4;
+    if (move.tier === "domain") { state.invuln = 3.0; showBanner("DOMAIN EXPANSION"); }
     if (state.mode === "campaign" && state.enemy && !state.enemy.dead && move.dmg) {
-      effects.trigger("burst", { x: state.enemy.pos.x * W, y: state.enemy.pos.y * H, palette: char.palette, W, H });
-      if ((move.tier === "ultimate" || move.tier === "domain" || combo)) showStatus("STAGGERED", "stagger");
+      effects.trigger("burst", { x: state.enemy.pos.x * W, y: state.enemy.pos.y * H, palette: char.palette, W, H, big: bigMove });
+      if (bigMove) showStatus("STAGGERED", "stagger");
       if (state.enemy.damage(move.dmg)) campaignClear();
     }
     if (state.mode === "versus" && versus) versus.send({ type: "attack", char: char.id, move: serialize(move) });
   }
   return true;
+}
+function showCutin(move, char, charged) {
+  els.cutin.style.setProperty("--accent", char.accent);
+  els.cutinInit.textContent = char.initial;
+  els.cutinName.textContent = (charged ? "CHARGED · " : "") + move.name;
+  els.cutin.classList.remove("go"); void els.cutin.offsetWidth; els.cutin.classList.add("go");
 }
 function feedCombo() {
   state.recent.push(state.clock);
@@ -437,48 +448,74 @@ let hintTimer;
 function hint(text, ms = 1500) { els.hint.textContent = text; els.hint.classList.add("show"); clearTimeout(hintTimer); hintTimer = setTimeout(() => els.hint.classList.remove("show"), ms); }
 
 /* ---------- defense: counter / dodge ---------- */
+// Timing skill-check: input lands "perfect" only in the late sweet window.
 function startPrompt(type, dir, dur) {
   const need = pick(["fist", "open", "one", "two"]);
   state.qte = { type, need, dir, t: 0, dur, done: false };
-  if (type === "counter") { els.qteSign.textContent = signOf(need).emoji; els.qteLabel.textContent = "COUNTER!"; }
+  if (type === "counter") { els.qteSign.textContent = signOf(need).emoji; els.qteLabel.textContent = "COUNTER — " + signOf(need).label; }
   else { const dd = dir === "left" ? "right" : "left"; els.qteSign.textContent = dd === "left" ? "←" : "→"; els.qteLabel.textContent = "DODGE!"; }
-  els.qte.style.setProperty("--p", 1); els.qte.classList.add("show");
+  els.qte.style.setProperty("--p", 1); els.qte.classList.remove("sweet"); els.qte.classList.add("show");
 }
-function clearQte() { state.qte = null; if (els.qte) els.qte.classList.remove("show"); }
-function counterSuccess() {
-  if (!state.qte || state.qte.done || state.qte.type !== "counter") return;
-  state.qte.done = "counter"; els.qte.classList.remove("show");
+function clearQte() { state.qte = null; if (els.qte) els.qte.classList.remove("show", "sweet"); }
+function registerQteInput(kind) {
+  const q = state.qte; if (!q || q.done) return;
+  if (q.type === "counter" && kind === "swipe") return;
+  if (q.type === "dodge" && kind === "sign") return;
+  const f = q.t / q.dur;
+  const zone = (f >= 0.56 && f <= 0.99) ? "perfect" : f >= 0.3 ? "good" : "early";
+  els.qte.classList.remove("show");
+  if (q.type === "counter") {
+    if (zone === "early") { q.done = "early"; showStatus("MISS", "blocked"); return; }
+    q.done = "counter"; counterHit(zone === "perfect");
+  } else {
+    q.done = "dodge"; doDodge(zone !== "early");
+  }
+}
+function counterHit(perfect) {
   const W = els.fx.width, H = els.fx.height;
   effects.trigger("parry", { x: W / 2, y: H * .42, palette: state.char.palette, W, H });
-  audio.play("flash"); state.surge = Math.min(1, state.surge + .25);
-  showStatus("COUNTER", "counter"); flashTech("COUNTER", "#fff");
-  if (state.enemy && !state.enemy.dead) { effects.trigger("burst", { x: state.enemy.pos.x * W, y: state.enemy.pos.y * H, palette: state.char.palette, W, H }); if (state.enemy.damage(24)) campaignClear(); }
+  effects.punchScreen(16, "#fff"); audio.play("flash");
+  state.surge = Math.min(1, state.surge + (perfect ? .3 : .15));
+  showStatus(perfect ? "PERFECT" : "COUNTER", "counter"); flashTech("COUNTER", "#fff");
+  if (state.enemy && !state.enemy.dead) { effects.trigger("burst", { x: state.enemy.pos.x * W, y: state.enemy.pos.y * H, palette: state.char.palette, W, H, big: perfect }); if (state.enemy.damage(perfect ? 30 : 16)) campaignClear(); }
+}
+function doDodge(reward) {
+  state.invuln = Math.max(state.invuln, .6);
+  particles.burst(els.fx.width * .5, els.fx.height * .55, state.char.palette.glow, 1.2, 16, 9, "streak");
+  if (reward) state.surge = Math.min(1, state.surge + .1);
+  showStatus("BLOCKED", "blocked"); audio.play("ui");
 }
 function dodge() {
+  if (state.qte && !state.qte.done && state.qte.type === "dodge") return registerQteInput("swipe");
   if (state.invuln > .3) return;
-  state.invuln = Math.max(state.invuln, .6);
-  const W = els.fx.width, H = els.fx.height;
-  effects.punchScreen(6); particles.burst(W * .5, H * .55, state.char.palette.glow, 1.2, 16, 9, "streak");
-  if (state.qte && !state.qte.done && state.qte.type === "dodge") { state.qte.done = "dodge"; els.qte.classList.remove("show"); state.surge = Math.min(1, state.surge + .12); }
-  hint("↪ Dodge!"); audio.play("ui");
+  state.invuln = Math.max(state.invuln, .55);
+  effects.punchScreen(5); particles.burst(els.fx.width * .5, els.fx.height * .55, state.char.palette.glow, 1.2, 14, 9, "streak");
+  audio.play("ui");
 }
 function updateCampaign(dt) {
   if (state.enemyAnim.lunge > 0) state.enemyAnim.lunge -= dt;
-  if (state.qte && !state.qte.done) {
-    state.qte.t += dt; els.qte.style.setProperty("--p", Math.max(0, 1 - state.qte.t / state.qte.dur));
-    if (state.qte.type === "counter" && state.curSign === state.qte.need) { state.qte.hold = (state.qte.hold || 0) + dt; if (state.qte.hold >= .12) counterSuccess(); }
+  const q = state.qte;
+  if (q && !q.done) {
+    q.t += dt; const f = q.t / q.dur;
+    els.qte.style.setProperty("--p", Math.max(0, 1 - f));
+    els.qte.classList.toggle("sweet", f >= 0.56 && f <= 0.99);
+    if (q.type === "counter" && state.curSign === q.need) registerQteInput("sign");
   }
   if (state.matchOver || !state.enemy) return;
+  // the curse gathers cursed energy as it winds up (telegraph)
+  if (state.enemy.telegraph > 0) particles.implode(state.enemy.pos.x * els.fx.width, state.enemy.pos.y * els.fx.height, state.enemy.s.color, 1.4, 4, 90);
   const ev = state.enemy.update(dt);
   if (ev?.telegraph) startPrompt(ev.telegraph.type, ev.telegraph.dir, ev.telegraph.dur);
   if (ev?.attack) {
     state.enemyAnim.lunge = .35;
-    const W = els.fx.width, H = els.fx.height, col = state.enemy.s.color;
-    const countered = state.qte && state.qte.done === "counter";
-    const dodged = (state.qte && state.qte.done === "dodge") || state.invuln > 0;
+    const W = els.fx.width, H = els.fx.height, col = state.enemy.s.color, ex = state.enemy.pos.x * W, ey = state.enemy.pos.y * H;
+    const countered = q && q.done === "counter";
+    const dodged = (q && q.done === "dodge") || state.invuln > 0;
     clearQte();
     if (countered) return;
-    effects.trigger("beast", { x: state.enemy.pos.x * W, y: state.enemy.pos.y * H, aim: Math.atan2(H * .86 - state.enemy.pos.y * H, W / 2 - state.enemy.pos.x * W), palette: { a: col, b: "#1a0a12", glow: col }, W, H, incoming: false });
+    // the cursed spirit's attack flies at the player
+    const aim = Math.atan2(H * .82 - ey, W / 2 - ex);
+    effects.trigger(ev.attack.type === "counter" ? "slash" : "beast", { x: ex, y: ey, aim, palette: { a: col, b: "#1a0a12", glow: col }, W, H });
     if (dodged) { showStatus("BLOCKED", "blocked"); return; }
     effects.trigger("burst", { x: W / 2, y: H * .82, palette: { a: "#ff3b4e", b: "#8b2bff", glow: "#ff9aa2" }, W, H });
     effects.punchScreen(18, "#ff3b4e"); audio.play("hit");
@@ -648,9 +685,7 @@ function wireUI() {
   els.czClose.onclick = () => els.customize.classList.add("hidden");
   els.backBtn.onclick = leaveStage;
   els.captureBtn.onclick = capture;
-  els.qte.onclick = () => { if (state.qte && !state.qte.done) { if (state.qte.type === "counter") counterSuccess(); else dodge(); } };
-  els.lookBtn.onclick = () => { state.look = !state.look; els.lookBtn.classList.toggle("active", state.look); if (state.look) ensureFace(); };
-  els.lookBtn.classList.toggle("active", state.look);
+  els.qte.onclick = () => registerQteInput("tap");
   els.cloakBtn.onclick = () => { state.cloak = !state.cloak; els.cloakBtn.classList.toggle("active", state.cloak); };
   els.cloakBtn.classList.toggle("active", state.cloak);
   els.mirrorBtn.onclick = () => { state.mirror = !state.mirror; };

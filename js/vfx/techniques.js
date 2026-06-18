@@ -399,79 +399,67 @@ const TECH = {
   domain(o, mgr) {
     mgr.domainActive = true;
     const style = o.style;
-    const W = o.W, H = o.H, cx = W / 2, cy = H / 2;
-    const stars = Array.from({ length: 120 }, () => ({ x: rand(0, W), y: rand(0, H), s: rand(0.5, 2.5), p: rand(0, TAU) }));
-    const slashes = Array.from({ length: 26 }, () => ({ x: rand(0, W), y: rand(0, H), a: rand(-1, 1), l: rand(60, 220), d: rand(0, 1.6) }));
+    const W = o.W, H = o.H, cx = W / 2, cy = H / 2, MAX = Math.hypot(W, H);
+    const stars = Array.from({ length: 150 }, () => ({ x: rand(0, W), y: rand(0, H), s: rand(0.5, 2.6), p: rand(0, TAU) }));
+    const slashes = Array.from({ length: 40 }, () => ({ x: rand(0, W), y: rand(0, H), a: rand(-1, 1), l: rand(80, 280), d: rand(0, 2.0) }));
+    const eyes = Array.from({ length: 14 }, () => ({ x: rand(W * 0.08, W * 0.92), y: rand(H * 0.1, H * 0.9), p: rand(0, TAU) }));
+    const ACC = style === "shrine" ? "#ff2230" : style === "shadow" ? "#7c8bff" : "#6ec3ff";
     return {
-      dur: 2.8, under: true, domain: true,
+      dur: 3.0, under: true, domain: true,
       update(dt, ps) {
-        if (!this.k) {
-          this.k = true;
-          mgr.punchScreen(30, style === "shrine" ? "#ff2230" : style === "shadow" ? "#3a2a6a" : "#fff");
-        }
-        mgr.shake = Math.max(mgr.shake, 6 * Math.max(0, 1 - this.t / this.dur));
-        if (style === "shrine" && Math.random() < 0.5) ps.stream(rand(0, W), rand(0, H), rand(-20, 20), rand(-20, 20), "#fff", 1.2, 3, 0.1);
+        if (!this.k) { this.k = true; mgr.punchScreen(34, "#fff"); }
+        mgr.shake = Math.max(mgr.shake, 7 * Math.max(0, 1 - this.t / this.dur));
+        // sure-hit pulse at ~0.7s
+        if (!this.hit && this.t > 0.7) { this.hit = true; mgr.punchScreen(20, ACC); ps.ring(cx, cy, "#fff", 1.6, 70, 12); }
+        if (style === "shrine" && Math.random() < 0.6) ps.stream(rand(0, W), rand(0, H), rand(-26, 26), rand(-26, 26), "#fff", 1.2, 3, 0.1);
+        if (style === "void" && Math.random() < 0.5) ps.spawn({ x: rand(0, W), y: rand(0, H), vx: 0, vy: 0, life: 0.6, size: rand(1, 2.5), color: "#cfe0ff", glow: 1.2 });
       },
       render(ctx, ps, W, H) {
-        const inT = Math.min(1, this.t / 0.5);
+        const inT = Math.min(1, this.t / 0.45);
         const outT = this.t > this.dur - 0.6 ? (this.dur - this.t) / 0.6 : 1;
         const a = Math.min(inT, outT);
+        const rot = this.t * 0.4;
         ctx.save();
+        // base fill
+        const bg = ctx.createRadialGradient(cx, cy, 0, cx, cy, MAX * 0.62);
+        if (style === "void") { bg.addColorStop(0, "#241552"); bg.addColorStop(0.55, "#0a0524"); bg.addColorStop(1, "#000"); }
+        else if (style === "shrine") { bg.addColorStop(0, "#360608"); bg.addColorStop(0.6, "#140103"); bg.addColorStop(1, "#000"); }
+        else { bg.addColorStop(0, "#0d1030"); bg.addColorStop(0.6, "#04060f"); bg.addColorStop(1, "#000"); }
+        ctx.globalAlpha = a * 0.94; ctx.fillStyle = bg; ctx.fillRect(0, 0, W, H);
+
+        ctx.globalCompositeOperation = "lighter";
+        // radial light rays
+        ctx.globalAlpha = a * 0.16; ctx.fillStyle = ACC;
+        for (let i = 0; i < 28; i++) { const ang = i / 28 * TAU + rot; ctx.beginPath(); ctx.moveTo(cx, cy); ctx.lineTo(cx + Math.cos(ang - 0.04) * MAX, cy + Math.sin(ang - 0.04) * MAX); ctx.lineTo(cx + Math.cos(ang + 0.04) * MAX, cy + Math.sin(ang + 0.04) * MAX); ctx.closePath(); ctx.fill(); }
+
         if (style === "void") {
-          ctx.globalAlpha = a * 0.92;
-          const g = ctx.createRadialGradient(cx, cy, 0, cx, cy, Math.max(W, H) * 0.7);
-          g.addColorStop(0, "#1b1140"); g.addColorStop(0.6, "#070318"); g.addColorStop(1, "#000");
-          ctx.fillStyle = g; ctx.fillRect(0, 0, W, H);
-          ctx.globalCompositeOperation = "lighter";
-          ctx.shadowBlur = 0;
-          for (const s of stars) {
-            const tw = 0.5 + 0.5 * Math.sin(this.t * 4 + s.p);
-            ctx.globalAlpha = a * tw; ctx.fillStyle = "#cfe0ff";
-            ctx.beginPath(); ctx.arc(s.x, s.y, s.s * 1.6, 0, TAU); ctx.fill();
-          }
-          // neuron web
+          for (const s of stars) { const tw = 0.5 + 0.5 * Math.sin(this.t * 4 + s.p); ctx.globalAlpha = a * tw; ctx.fillStyle = "#cfe0ff"; ctx.beginPath(); ctx.arc(s.x, s.y, s.s * 1.6, 0, TAU); ctx.fill(); }
           ctx.globalAlpha = a * 0.5; ctx.strokeStyle = "#6ec3ff"; ctx.lineWidth = 1;
-          for (let i = 0; i < stars.length; i += 3) {
-            const s1 = stars[i], s2 = stars[(i + 7) % stars.length];
-            if (Math.hypot(s1.x - s2.x, s1.y - s2.y) < 160) { ctx.beginPath(); ctx.moveTo(s1.x, s1.y); ctx.lineTo(s2.x, s2.y); ctx.stroke(); }
-          }
-          // infinity glyph
-          ctx.globalAlpha = a; ctx.font = `900 ${Math.min(W, H) * 0.4}px "Noto Sans JP",sans-serif`;
-          ctx.textAlign = "center"; ctx.textBaseline = "middle"; ctx.fillStyle = "rgba(255,255,255,.05)";
-          ctx.fillText("∞", cx, cy);
+          for (let i = 0; i < stars.length; i += 3) { const s1 = stars[i], s2 = stars[(i + 7) % stars.length]; if (Math.hypot(s1.x - s2.x, s1.y - s2.y) < 170) { ctx.beginPath(); ctx.moveTo(s1.x, s1.y); ctx.lineTo(s2.x, s2.y); ctx.stroke(); } }
+          // concentric sigil
+          ctx.globalAlpha = a * 0.6; ctx.strokeStyle = "#bfe3ff"; ctx.lineWidth = 2;
+          for (let r = 1; r <= 4; r++) { ctx.beginPath(); ctx.arc(cx, cy, Math.min(W, H) * 0.09 * r, 0, TAU); ctx.stroke(); }
+          ctx.save(); ctx.translate(cx, cy); ctx.rotate(rot); ctx.beginPath();
+          for (let i = 0; i < 6; i++) { const ang = i / 6 * TAU, rr = Math.min(W, H) * 0.34; i ? ctx.lineTo(Math.cos(ang) * rr, Math.sin(ang) * rr) : ctx.moveTo(Math.cos(ang) * rr, Math.sin(ang) * rr); }
+          ctx.closePath(); ctx.stroke(); ctx.restore();
         } else if (style === "shrine") {
-          ctx.globalAlpha = a * 0.9;
-          const g = ctx.createRadialGradient(cx, cy, 0, cx, cy, Math.max(W, H) * 0.7);
-          g.addColorStop(0, "#2a0608"); g.addColorStop(0.7, "#120103"); g.addColorStop(1, "#000");
-          ctx.fillStyle = g; ctx.fillRect(0, 0, W, H);
-          // skull / shrine silhouette
-          ctx.globalAlpha = a * 0.5; ctx.fillStyle = "#000"; ctx.strokeStyle = "#ff2230"; ctx.lineWidth = 2; ctx.shadowColor = "#ff2230"; ctx.shadowBlur = 18;
-          ctx.beginPath(); ctx.moveTo(cx, cy - H * 0.28);
-          ctx.lineTo(cx - W * 0.22, cy + H * 0.1); ctx.lineTo(cx + W * 0.22, cy + H * 0.1); ctx.closePath(); ctx.fill(); ctx.stroke();
-          // raining slashes
+          // torii silhouette
+          ctx.globalCompositeOperation = "source-over"; ctx.globalAlpha = a * 0.85;
+          ctx.fillStyle = "#0a0203"; ctx.strokeStyle = "#ff2230"; ctx.lineWidth = 3;
+          const tw = W * 0.5, th = H * 0.5, tx = cx, ty = cy + H * 0.12;
+          ctx.fillRect(tx - tw / 2 - 14, ty - th, 22, th); ctx.fillRect(tx + tw / 2 - 8, ty - th, 22, th);
+          ctx.fillRect(tx - tw / 2 - 40, ty - th - 6, tw + 80, 26);
+          ctx.fillRect(tx - tw / 2 - 28, ty - th + 28, tw + 56, 16);
+          ctx.strokeRect(tx - tw / 2 - 40, ty - th - 6, tw + 80, 26);
           ctx.globalCompositeOperation = "lighter";
-          for (const s of slashes) {
-            if (this.t < s.d) continue;
-            const sa = Math.max(0, 1 - (this.t - s.d) / 0.6) * a;
-            ctx.globalAlpha = sa; ctx.strokeStyle = "#fff"; ctx.lineWidth = 2; ctx.shadowColor = "#ff5050"; ctx.shadowBlur = 14;
-            ctx.beginPath(); ctx.moveTo(s.x, s.y); ctx.lineTo(s.x + Math.cos(s.a) * s.l, s.y + Math.sin(s.a) * s.l); ctx.stroke();
-          }
-        } else { // shadow garden
-          ctx.globalAlpha = a * 0.92;
-          ctx.fillStyle = "#05060f"; ctx.fillRect(0, 0, W, H);
-          ctx.globalCompositeOperation = "lighter"; ctx.shadowBlur = 0;
-          for (const s of stars) {
-            ctx.globalAlpha = a * 0.32; ctx.fillStyle = "#2a3470";
-            const r = 30 + 20 * Math.sin(this.t + s.p);
-            ctx.beginPath(); ctx.arc(s.x, s.y, r, 0, TAU); ctx.fill();
-          }
-          // glowing eyes pairs
-          ctx.globalAlpha = a; ctx.fillStyle = "#aeb8ff";
-          for (let i = 0; i < slashes.length; i += 2) {
-            const s = slashes[i];
-            ctx.beginPath(); ctx.arc(s.x, s.y, 3, 0, TAU); ctx.arc(s.x + 14, s.y, 3, 0, TAU); ctx.fill();
-          }
+          for (const s of slashes) { if (this.t < s.d) continue; const sa = Math.max(0, 1 - (this.t - s.d) / 0.6) * a; ctx.globalAlpha = sa; ctx.strokeStyle = "#fff"; ctx.lineWidth = 2; ctx.beginPath(); ctx.moveTo(s.x, s.y); ctx.lineTo(s.x + Math.cos(s.a) * s.l, s.y + Math.sin(s.a) * s.l); ctx.stroke(); }
+        } else { // shadow garden — ink flood + ripples + eyes
+          for (let r = 0; r < 5; r++) { ctx.globalAlpha = a * 0.18; ctx.strokeStyle = "#7c8bff"; ctx.lineWidth = 2; const rr = ((this.t * 120 + r * 90) % (MAX * 0.6)); ctx.beginPath(); ctx.arc(cx, cy, rr, 0, TAU); ctx.stroke(); }
+          ctx.globalAlpha = a; ctx.fillStyle = "#cdd4ff";
+          for (const e of eyes) { const blink = Math.sin(this.t * 2 + e.p) > -0.8 ? 1 : 0.15; ctx.globalAlpha = a * blink; ctx.beginPath(); ctx.ellipse(e.x, e.y, 7, 4, 0, 0, TAU); ctx.ellipse(e.x + 18, e.y, 7, 4, 0, 0, TAU); ctx.fill(); }
         }
+        // expanding barrier dome ring at cast
+        if (this.t < 0.7) { const rr = ease(this.t / 0.7) * MAX * 0.6; ctx.globalAlpha = (1 - this.t / 0.7) * a; ctx.strokeStyle = "#fff"; ctx.lineWidth = 6; ctx.beginPath(); ctx.arc(cx, cy, rr, 0, TAU); ctx.stroke(); }
         ctx.restore();
       },
     };

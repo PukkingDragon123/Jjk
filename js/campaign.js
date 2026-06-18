@@ -7,25 +7,25 @@ const rand = (a, b) => a + Math.random() * (b - a);
 export const STAGES = [
   {
     name: "Lurking Curse", emoji: "👁️", color: "#7fd1a8",
-    hp: 70, atkEvery: 2.7, atkDmg: 9, atkName: "Grasp",
+    hp: 70, atkEvery: 2.3, atkDmg: 9, atkName: "Grasp",
     story: "A weak curse has nested in a shuttered arcade, feeding on leftover fear. Your first assignment: exorcise it.",
     clear: "The curse dissolves into smoke. Routine — but everyone starts somewhere.",
   },
   {
     name: "Finger Bearer", emoji: "🩸", color: "#ff8a3b",
-    hp: 115, atkEvery: 2.4, atkDmg: 12, atkName: "Lunge",
+    hp: 115, atkEvery: 2.0, atkDmg: 12, atkName: "Lunge",
     story: "It swallowed a cursed finger and swelled with power. It darts around now — keep moving, read the tells, dodge.",
     clear: "Down it goes. Your cursed energy flows a little smoother than before.",
   },
   {
     name: "Cursed Womb", emoji: "🥚", color: "#b14bff",
-    hp: 155, atkEvery: 2.1, atkDmg: 15, atkName: "Wail",
+    hp: 155, atkEvery: 1.7, atkDmg: 15, atkName: "Wail",
     story: "A born-from-humans curse, half-formed and screaming. It hits hard and fast — time your counters.",
     clear: "Silence at last. You're holding your own against real threats.",
   },
   {
     name: "Special Grade", emoji: "👹", color: "#ff3b4e",
-    hp: 210, atkEvery: 1.85, atkDmg: 18, atkName: "Cataclysm",
+    hp: 210, atkEvery: 1.45, atkDmg: 18, atkName: "Cataclysm",
     story: "Disaster-class. The air itself feels heavier. It will rush you when wounded — counter, dodge, and end it.",
     clear: "Impossible odds, exorcised. You're not the strongest yet — but the gap is closing.",
   },
@@ -39,7 +39,7 @@ export class Enemy {
     this.pending = null; this.info = null;
   }
   get pct() { return this.hp / this.max; }
-  get enraged() { return this.pct < 0.4; }
+  get enraged() { return this.pct < 0.45; }
 
   // returns null | {telegraph:{type,dir,name,dur}} | {attack:{type,dir,dmg,name}}
   update(dt) {
@@ -49,7 +49,7 @@ export class Enemy {
       this.target = { x: rand(0.16, 0.84), y: rand(0.15, 0.42) };
       this.moveT = rand(this.enraged ? 0.7 : 1.0, this.enraged ? 1.6 : 2.2);
     }
-    const k = Math.min(1, dt * (this.enraged ? 3.2 : 2.4));
+    const k = Math.min(1, dt * (this.enraged ? 3.9 : 2.9));
     this.pos.x += (this.target.x - this.pos.x) * k;
     this.pos.y += (this.target.y - this.pos.y) * k;
 
@@ -65,7 +65,7 @@ export class Enemy {
       const dir = Math.random() < 0.5 ? "left" : "right";
       this.pending = { type, dir, dmg: this.s.atkDmg, name: this.s.atkName };
       this.info = { type, dir };
-      this.telegraph = this.enraged ? 0.58 : 0.8;
+      this.telegraph = this.enraged ? 0.5 : 0.7;
       return { telegraph: { type, dir, name: this.s.atkName, dur: this.telegraph } };
     }
     return null;

@@ -36,12 +36,13 @@ function singleSign(h) {
 }
 
 const CAST_HOLD = 0.4;      // seconds to lock a sign
+const CHARGE_EXTRA = 0.55;  // extra hold after a cast charges a stronger version
 const SMOOTH = 0.45;        // landmark EMA (lower = smoother)
 const SWIPE_SPEED = 11;     // palm-widths / second for a dodge swipe
 
 export class GestureEngine {
   constructor() {
-    this.holdSign = null; this.holdT = 0; this.spent = false; this.nullT = 0;
+    this.holdSign = null; this.holdT = 0; this.spent = false; this.chargeSpent = false; this.nullT = 0;
     this.smooth = []; this.window = []; this.lastNow = 0;
     this.prevCenter = null; this.swipeCool = 0;
   }
@@ -65,7 +66,7 @@ export class GestureEngine {
     const dt = Math.min(0.05, Math.max(0.001, (now - this.lastNow) / 1000));
     this.lastNow = now;
     this.swipeCool = Math.max(0, this.swipeCool - dt);
-    const out = { hands: [], sign: null, progress: 0, cast: null, pos: null, aim: -Math.PI / 2, swipe: false, swipeDir: null };
+    const out = { hands: [], sign: null, progress: 0, cast: null, charged: false, charging: false, pos: null, aim: -Math.PI / 2, swipe: false, swipeDir: null };
 
     const raw = result.hands || [];
     if (!raw.length) { this.holdSign = null; this.holdT = 0; this.spent = false; this.window = []; this.prevCenter = null; this.smooth = []; return out; }
@@ -99,11 +100,19 @@ export class GestureEngine {
 
     // hold-to-cast with brief-null tolerance
     if (sign && sign === this.holdSign) { this.holdT += dt; this.nullT = 0; }
-    else if (sign == null) { this.nullT += dt; if (this.nullT > 0.22) { this.holdSign = null; this.holdT = 0; this.spent = false; } }
-    else { this.holdSign = sign; this.holdT = 0; this.spent = false; this.nullT = 0; }
+    else if (sign == null) { this.nullT += dt; if (this.nullT > 0.22) { this.holdSign = null; this.holdT = 0; this.spent = false; this.chargeSpent = false; } }
+    else { this.holdSign = sign; this.holdT = 0; this.spent = false; this.chargeSpent = false; this.nullT = 0; }
 
-    if (this.holdSign && !this.spent) out.progress = Math.min(1, this.holdT / CAST_HOLD);
-    if (this.holdSign && !this.spent && this.holdT >= CAST_HOLD) { this.spent = true; out.cast = this.holdSign; }
+    if (this.holdSign) {
+      if (!this.spent) {
+        out.progress = Math.min(1, this.holdT / CAST_HOLD);
+        if (this.holdT >= CAST_HOLD) { this.spent = true; out.cast = this.holdSign; }
+      } else if (!this.chargeSpent) {
+        out.charging = true;
+        out.progress = Math.min(1, (this.holdT - CAST_HOLD) / CHARGE_EXTRA);
+        if (this.holdT >= CAST_HOLD + CHARGE_EXTRA) { this.chargeSpent = true; out.cast = this.holdSign; out.charged = true; }
+      }
+    }
     return out;
   }
 }

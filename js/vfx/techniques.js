@@ -330,6 +330,27 @@ const TECH = {
     };
   },
 
+  // ---- guard / shield (Infinity) ----
+  guard(o, mgr) {
+    const x = o.x, y = o.y, c = o.palette.a, c2 = o.palette.glow;
+    return {
+      dur: 1.0,
+      update(dt, ps) { if (!this.k) { this.k = true; ps.ring(x, y, c2, 1.2, 36, 5); mgr.punchScreen(5, c2); } },
+      render(ctx) {
+        const t = this.t / this.dur, R = 70 + ease(t) * 60, a = Math.max(0, 1 - t);
+        ctx.save(); ctx.globalCompositeOperation = "lighter"; ctx.globalAlpha = a;
+        ctx.strokeStyle = c2; ctx.lineWidth = 3;
+        for (let ring = 0; ring < 2; ring++) {
+          const rr = R - ring * 22;
+          ctx.beginPath();
+          for (let i = 0; i <= 6; i++) { const ang = i / 6 * TAU + this.t * (ring ? -1.5 : 1.5); const px = x + Math.cos(ang) * rr, py = y + Math.sin(ang) * rr; i ? ctx.lineTo(px, py) : ctx.moveTo(px, py); }
+          ctx.closePath(); ctx.stroke();
+        }
+        ctx.restore();
+      },
+    };
+  },
+
   // ---- DOMAIN EXPANSION ----
   domain(o, mgr) {
     mgr.domainActive = true;

@@ -29,6 +29,19 @@ try {
   console.log("✓ ranked queue opens");
   await page.click("#queueClose");
 
+  // LOADOUT: open, switch tab, equip a pool skill, upgrade, close
+  await page.click("#customizeBtn");
+  await page.waitForSelector("#customize:not(.hidden)", { timeout: 6000 });
+  const coins0 = await page.$eval("#czCoins", (e) => parseInt(e.textContent) || 0);
+  await page.click(".cz-tab:nth-child(2)");
+  await page.click(".cz-skill:nth-child(4)"); // equip 4th pool skill into selected slot
+  const up = await page.$(".cz-skill .up:not([disabled])");
+  if (up) await up.click();
+  const coins1 = await page.$eval("#czCoins", (e) => parseInt(e.textContent) || 0);
+  console.log(`✓ loadout opens, equip + upgrade works (coins ${coins0} -> ${coins1})`);
+  await page.screenshot({ path: "test/shot-loadout.png" });
+  await page.click("#czClose");
+
   // CAMPAIGN: story -> stage -> enemy -> cast spells
   await page.click('.mode-btn[data-mode="campaign"]');
   await page.waitForSelector("#story:not(.hidden)", { timeout: 8000 });
@@ -56,13 +69,17 @@ try {
   await page.click('.mode-btn[data-mode="solo"]');
   await page.waitForSelector("#stage:not(.hidden)");
   await page.waitForTimeout(500);
+  const spellN = await page.$$eval(".spell", (n) => n.length);
+  console.log(`✓ spellbook slots: ${spellN} (3 equipped + ult + domain)`);
   await page.click(".spell:nth-child(1)");
-  await page.click(".spell:nth-child(2)"); // basics -> may trigger combo
-  await page.waitForTimeout(250);
+  await page.click(".spell:nth-child(2)");
+  await page.click(".spell:nth-child(3)"); // 3 basics -> combo finisher
+  await page.waitForTimeout(300);
   const histN = await page.$$eval("#history .h", (n) => n.length);
-  console.log(`✓ spell history entries: ${histN}`);
-  if (histN < 2) throw new Error("spell history not recording");
-  await page.click(".spell:nth-child(4)"); // domain (energy starts full)
+  const comboN = await page.$$eval("#history .h.combo", (n) => n.length);
+  console.log(`✓ history ${histN} entries, combo finishers: ${comboN}`);
+  if (histN < 3) throw new Error("spell history not recording");
+  await page.click(".spell:nth-child(5)"); // domain (energy starts full)
   await page.waitForTimeout(700);
   const fps = await page.$eval("#fps", (e) => e.textContent);
   console.log("✓ solo combo + domain cast, fps:", fps);

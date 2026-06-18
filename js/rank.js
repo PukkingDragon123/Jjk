@@ -2,12 +2,12 @@
 const KEY = "jjkw_profile_v1";
 
 export const TIERS = [
-  { name: "Grade 4", jp: "四級", min: 0,   color: "#9aa0b5" },
-  { name: "Grade 3", jp: "三級", min: 120, color: "#7fd1a8" },
-  { name: "Grade 2", jp: "二級", min: 280, color: "#5cc0ff" },
-  { name: "Semi-Grade 1", jp: "準一級", min: 480, color: "#b48bff" },
-  { name: "Grade 1", jp: "一級", min: 700, color: "#ffb13b" },
-  { name: "Special Grade", jp: "特級", min: 980, color: "#ff3b4e" },
+  { name: "Grade 4", tag: "4",  min: 0,   color: "#9aa0b5" },
+  { name: "Grade 3", tag: "3",  min: 120, color: "#7fd1a8" },
+  { name: "Grade 2", tag: "2",  min: 280, color: "#5cc0ff" },
+  { name: "Semi-Grade 1", tag: "1−", min: 480, color: "#b48bff" },
+  { name: "Grade 1", tag: "1",  min: 700, color: "#ffb13b" },
+  { name: "Special Grade", tag: "SP", min: 980, color: "#ff3b4e" },
 ];
 
 export function load() {

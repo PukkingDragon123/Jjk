@@ -1,5 +1,6 @@
 // JUJUTSU WEB — camera + hand-sign casting + cursed VFX + campaign + versus/ranked.
-import { CHARACTERS, getCharacter, moveBySign } from "./characters.js";
+import { CHARACTERS, getCharacter, skillById, SLOT_SIGNS } from "./characters.js";
+import * as loadout from "./loadout.js";
 import { signOf } from "./signs.js";
 import { Tracker } from "./tracking.js";
 import { GestureEngine } from "./gestures.js";
@@ -37,6 +38,7 @@ const els = {
   help: $("#help"), helpBody: $("#helpBody"), helpClose: $("#helpClose"), howToBtn: $("#howToBtn"),
   lookBtn: $("#lookBtn"), cloakBtn: $("#cloakBtn"), captureBtn: $("#captureBtn"), soundBtn: $("#soundBtn"), mirrorBtn: $("#mirrorBtn"), backBtn: $("#backBtn"),
   gallery: $("#gallery"),
+  customize: $("#customize"), customizeBtn: $("#customizeBtn"), czTabs: $("#czTabs"), czCoins: $("#czCoins"), czSlots: $("#czSlots"), czPool: $("#czPool"), czClose: $("#czClose"),
 };
 
 const ctx = els.fx.getContext("2d");
@@ -53,8 +55,11 @@ const state = {
   aimPos: null, aim: -Math.PI / 2,
   history: [], recent: [], clock: 0,
   stageIndex: 0, enemy: null, enemyAnim: { lunge: 0 }, faceEyes: null,
+  book: [], czChar: "gojo", czSlot: 0,
   lastTechName: "", gallery: [],
 };
+function rebuildBook() { state.book = loadout.activeBook(state.char); }
+const bookBySign = (sign) => state.book.find((m) => m.sign === sign);
 let stream = null, versus = null, spellSlots = [], petals = [], faceInit = false;
 const artCache = {};
 function ensureFace() { if (!faceInit && state.look) { faceInit = true; face.init(); } }
@@ -73,7 +78,7 @@ function renderRankBadge() {
   const p = rank.load(), t = rank.tierFor(p.points), nx = rank.nextTier(p.points);
   const prog = nx ? Math.round(((p.points - t.min) / (nx.min - t.min)) * 100) : 100;
   els.rankBadge.style.setProperty("--accent", t.color);
-  els.rankBadge.innerHTML = `<div class="rg" style="color:${t.color}">${t.jp}</div>
+  els.rankBadge.innerHTML = `<div class="rg" style="color:${t.color}">${t.tag}</div>
     <div class="rinfo"><span class="rname">${t.name}</span><span class="rpts">${p.points} CE · ${p.wins}W/${p.losses}L</span>
     <span class="rprog"><span style="width:${prog}%;background:${t.color}"></span></span></div>`;
 }
@@ -94,8 +99,7 @@ function buildCharGrid() {
     const card = document.createElement("button");
     card.className = "char-card" + (i === 0 ? " sel" : "");
     card.style.setProperty("--accent", c.accent);
-    card.innerHTML = `<span class="tape"></span>
-      <div class="sticker"><div class="art-wrap"><div class="glyph">${c.glyph}</div>
+    card.innerHTML = `<div class="sticker"><div class="art-wrap"><div class="glyph">${c.initial}</div>
       <img class="art" alt="${c.name}" src="${c.art}" /></div>
       <div class="label"><span class="cname">${c.name}</span><span class="grade">${c.grade}</span></div></div>`;
     const img = card.querySelector(".art");
@@ -114,7 +118,8 @@ function buildHelp() {
     ["✋✊", "Basics", "Form the sign (open palm, fist, one finger, two fingers) shown under each basic spell."],
     ["👐", "Ultimate", "Open BOTH hands together — costs cursed energy (the bar at the top)."],
     ["🙏", "Domain", "Clasp BOTH hands when your energy is FULL to expand your Domain."],
-    ["🔗", "Combos", "Chain the basic signs in order (e.g. Blue → Red) to trigger an anime finisher."],
+    ["🔗", "Combos", "Land three basic skills in a row to unleash your character's combo finisher."],
+    ["🛠️", "Loadout", "Equip 3 skills into your slots and upgrade them with cursed coins (earned by winning)."],
     ["👆", "No camera AI?", "Just tap a spell card in the spellbook — works on any device."],
     ["👹", "Campaign", "Fight cursed spirits across a short story. Read their attack rhythm and time your domain."],
     ["⚔️", "Ranked / Versus", "Battle real people cross-play — matchmaking or a room code."],
@@ -125,12 +130,13 @@ function buildHelp() {
 /* ---------- spellbook ---------- */
 function buildSpellbook() {
   els.spellbook.innerHTML = ""; spellSlots = [];
-  for (const m of state.char.moves) {
+  for (const m of state.book) {
     const sl = document.createElement("button");
     sl.className = "spell"; sl.style.setProperty("--accent", state.char.accent);
-    const tag = m.tier === "ultimate" ? "ULT" : m.tier === "domain" ? "DOM" : "";
-    sl.innerHTML = `${tag ? `<span class="tag">${tag}</span>` : ""}<span class="sgn">${signOf(m.sign).emoji}</span>
-      <span class="snm">${m.name}</span><span class="ring"><span></span></span>`;
+    const tag = m.tier === "ultimate" ? "ULT" : m.tier === "domain" ? "DOM" : m.tier === "utility" ? "DEF" : "";
+    const lv = (m.lvl || 1) > 1 ? `<span class="lv">L${m.lvl}</span>` : "";
+    sl.innerHTML = `${tag ? `<span class="tag">${tag}</span>` : ""}${lv}<span class="sgn">${signOf(m.sign).emoji}</span>
+      <span class="snm">${m.short}</span><span class="ring"><span></span></span>`;
     sl.onclick = () => cast(m, { tap: true });
     els.spellbook.appendChild(sl);
     spellSlots.push({ el: sl, move: m, ring: sl.querySelector(".ring span") });
@@ -177,7 +183,7 @@ async function enterStage(mode) {
   if (playerHp()) playerHp().style.display = mode === "campaign" ? "block" : "none";
   els.hudCharName.textContent = state.char.name.split(" ")[0];
   els.hudCharGlyph.style.color = state.char.accent;
-  refreshAvatar(); buildSpellbook(); resize();
+  rebuildBook(); refreshAvatar(); buildSpellbook(); resize();
   if (mode === "campaign") setupStage();
   updateVersusHp();
   if (!state.running) { state.running = true; requestAnimationFrame(loop); }
@@ -220,7 +226,7 @@ function loop(now) {
   if (!effects.domainActive) state.ce = Math.min(1, state.ce + dt * 0.09);
   if (state.invuln > 0) state.invuln -= dt;
 
-  if (g.cast) { const m = moveBySign(state.char, g.cast); if (m) cast(m, {}); }
+  if (g.cast) { const m = bookBySign(g.cast); if (m) cast(m, {}); }
 
   // ambient aura at hands
   for (const h of g.hands) particles.aura(h.center.x, h.center.y, state.char.palette.glow, 1, state.cloak ? 2 : 1);
@@ -348,10 +354,10 @@ function drawHandRig(ctx, hands) {
 function cast(move, opts = {}) {
   if (!move) return;
   const W = els.fx.width, H = els.fx.height;
-  const pos = state.aimPos || { x: W / 2, y: H * 0.5 };
+  const pos = state.aimPos || { x: W / 2, y: H * 0.42 };
   if (!doCast(move, pos, state.aim, { combo: opts.combo })) return;
   flashSlot(move.id);
-  if (!opts.combo && move.tier === "basic") feedCombo(move.id);
+  if (!opts.combo && move.tier === "basic") feedCombo();
 }
 function doCast(move, pos, aim, { incoming = false, fromCharId = null, combo = false } = {}) {
   const char = incoming ? getCharacter(fromCharId || state.oppChar) : state.char;
@@ -361,13 +367,19 @@ function doCast(move, pos, aim, { incoming = false, fromCharId = null, combo = f
     state.ce = Math.max(0, state.ce - cost);
   }
   const W = els.fx.width, H = els.fx.height;
+  if (move.kind === "guard") { // defensive skill (e.g. Gojo's Infinity)
+    effects.trigger("guard", { x: pos.x, y: pos.y, palette: char.palette, W, H });
+    if (!incoming) { state.invuln = Math.max(state.invuln, 2.4); state.lastTechName = move.name; pushHistory(move, combo); }
+    audio.play(move.sfx || "ui"); flashTech(move.short, char.accent);
+    return true;
+  }
   effects.trigger(move.kind, { x: pos.x, y: pos.y, aim, palette: char.palette, W, H, incoming, ...move });
   audio.play(move.sfx || "blue");
-  flashTech(move.jp, char.accent);
+  flashTech(move.short, char.accent);
   if (!incoming) {
     state.lastTechName = move.name;
     pushHistory(move, combo);
-    if (move.tier === "domain") state.invuln = 2.2;
+    if (move.tier === "domain") state.invuln = 2.4;
     if (state.mode === "campaign" && state.enemy && !state.enemy.dead) {
       if (state.enemy.damage(move.dmg)) campaignClear(); updateCampaignHp();
     }
@@ -375,21 +387,18 @@ function doCast(move, pos, aim, { incoming = false, fromCharId = null, combo = f
   }
   return true;
 }
-function feedCombo(id) {
-  state.recent.push({ id, t: state.clock });
-  state.recent = state.recent.filter((r) => state.clock - r.t < 2.6);
-  const ids = state.recent.map((r) => r.id);
-  for (const c of state.char.combos || []) {
-    if (ids.length >= c.seq.length && c.seq.every((s, i) => ids[ids.length - c.seq.length + i] === s)) {
-      state.recent = [];
-      hint("⚡ COMBO · " + c.result.name);
-      cast(c.result, { combo: true });
-      break;
-    }
+function feedCombo() {
+  state.recent.push(state.clock);
+  state.recent = state.recent.filter((t) => state.clock - t < 2.6);
+  if (state.recent.length >= 3) {
+    state.recent = [];
+    const f = state.char.comboFinisher;
+    hint("⚡ COMBO · " + f.name);
+    cast(f, { combo: true });
   }
 }
 function serialize(m) {
-  return { kind: m.kind, jp: m.jp, name: m.name, dmg: m.dmg, style: m.style, sub: m.sub, warm: m.warm, water: m.water, barrage: m.barrage, big: m.big };
+  return { kind: m.kind, short: m.short, name: m.name, dmg: m.dmg, style: m.style, sub: m.sub, warm: m.warm, water: m.water, barrage: m.barrage, big: m.big };
 }
 function pushHistory(move, combo) {
   state.history.unshift({ emoji: combo ? "🔥" : signOf(move.sign).emoji, name: move.name, combo });
@@ -410,7 +419,7 @@ function hint(text, ms = 1500) { els.hint.textContent = text; els.hint.classList
 function refreshAvatar() {
   const img = artCache[state.char.id];
   if (img) { els.hudAvatar.src = img.src; els.hudAvatar.style.display = "block"; els.hudCharGlyph.style.display = "none"; }
-  else { els.hudAvatar.style.display = "none"; els.hudCharGlyph.style.display = ""; els.hudCharGlyph.textContent = state.char.glyph; }
+  else { els.hudAvatar.style.display = "none"; els.hudCharGlyph.style.display = ""; els.hudCharGlyph.textContent = state.char.initial; }
 }
 
 /* ---------- campaign ---------- */
@@ -429,7 +438,7 @@ function setupStage() {
   const s = STAGES[state.stageIndex];
   state.enemy = new Enemy(s);
   els.enemyEmoji.textContent = s.emoji;
-  els.enemyName.textContent = `${s.name} · ${s.jp}`;
+  els.enemyName.textContent = s.name;
   els.enemyName.style.color = s.color;
   ensurePlayerHp().style.display = "block";
   updateCampaignHp();
@@ -462,9 +471,10 @@ function campaignClear() {
   if (state.matchOver) return;
   state.matchOver = true;
   const s = STAGES[state.stageIndex];
-  flashTech("勝", "#ffc23b");
+  flashTech("WIN", "#ffc23b");
   effects.trigger("burst", { x: els.fx.width / 2, y: els.fx.height * 0.32, palette: state.char.palette, W: els.fx.width, H: els.fx.height, big: true, sub: "double" });
   const r = rank.recordResult(true);
+  loadout.addCoins(20); toast("+20 cursed coins ◈");
   const next = state.stageIndex + 1;
   saveProgress(Math.min(next, STAGES.length));
   setTimeout(() => {
@@ -475,7 +485,7 @@ function campaignClear() {
 function campaignDefeat() {
   if (state.matchOver) return;
   state.matchOver = true;
-  flashTech("敗", "#ff2e3e");
+  flashTech("LOSE", "#ff2e3e");
   setTimeout(() => openStory(true), 1400);
 }
 function openStory(retry, clearLine) {
@@ -510,17 +520,18 @@ function updateVersusHp() { els.selfHp.style.width = state.selfHp + "%"; els.opp
 function endMatch(win) {
   if (state.matchOver) return;
   state.matchOver = true;
-  flashTech(win ? "勝" : "敗", win ? "#ffc23b" : "#ff2e3e");
+  flashTech(win ? "WIN" : "LOSE", win ? "#ffc23b" : "#ff2e3e");
   let msg = win ? "Victory — you are the strongest." : "You have been defeated…";
   if (state.ranked) {
     const r = rank.recordResult(win); const sign = r.delta >= 0 ? "+" : "";
     msg += `  ${sign}${r.delta} CE`;
-    if (r.promoted) { msg = `PROMOTED → ${r.tier.name}!  ${sign}${r.delta} CE`; flashTech(r.tier.jp, r.tier.color); }
+    if (win) { loadout.addCoins(15); toast("+15 cursed coins ◈"); }
+    if (r.promoted) { msg = `PROMOTED → ${r.tier.name}!  ${sign}${r.delta} CE`; flashTech(r.tier.tag, r.tier.color); }
     else if (r.demoted) msg = `Demoted to ${r.tier.name}.  ${r.delta} CE`;
     renderRankBadge();
   }
   hint(msg, 4500);
-  if (win) effects.trigger("domain", { x: els.fx.width / 2, y: els.fx.height / 2, palette: state.char.palette, W: els.fx.width, H: els.fx.height, style: state.char.moves[3]?.style || "void" });
+  if (win) effects.trigger("domain", { x: els.fx.width / 2, y: els.fx.height / 2, palette: state.char.palette, W: els.fx.width, H: els.fx.height, style: state.char.domain.style || "void" });
 }
 function newVersus() {
   return new Versus({
@@ -545,7 +556,7 @@ async function startRanked() {
   try { await ensureCamera(); } catch (e) { return toast("Camera permission needed 📷"); }
   state.ranked = true;
   const t = rank.tierFor(rank.load().points);
-  els.queueRank.innerHTML = `your grade · <b>${t.name}</b> ${t.jp}`;
+  els.queueRank.innerHTML = `your grade · <b>${t.name}</b>`;
   els.queueStatus.textContent = "finding an opponent…";
   els.queue.classList.remove("hidden");
   versus = newVersus();
@@ -581,6 +592,50 @@ function toast(msg) {
   toastEl.textContent = msg; toastEl.style.opacity = "1"; clearTimeout(toastEl._t); toastEl._t = setTimeout(() => (toastEl.style.opacity = "0"), 2200);
 }
 
+/* ---------- loadout / customize ---------- */
+function openCustomize() { state.czChar = state.char.id; state.czSlot = 0; renderCustomize(); els.customize.classList.remove("hidden"); }
+function renderCustomize() {
+  const c = getCharacter(state.czChar);
+  els.czCoins.textContent = loadout.coins() + " coins";
+  els.czTabs.innerHTML = CHARACTERS.map((ch) => `<button class="cz-tab${ch.id === state.czChar ? " active" : ""}" data-c="${ch.id}" style="--accent:${ch.accent}">${ch.name.split(" ")[0]}</button>`).join("");
+  els.czTabs.querySelectorAll(".cz-tab").forEach((b) => (b.onclick = () => { state.czChar = b.dataset.c; state.czSlot = 0; audio.play("ui"); renderCustomize(); }));
+
+  const eq = loadout.getEquipped(c.id);
+  const slots = eq.map((id, i) => ({ sign: SLOT_SIGNS[i], move: skillById(c, id), idx: i, role: "Slot " + (i + 1) }));
+  slots.push({ sign: "double", move: c.ultimate, role: "Ultimate", fixed: true });
+  slots.push({ sign: "pray", move: c.domain, role: "Domain", fixed: true });
+  els.czSlots.innerHTML = slots.map((s) => {
+    const lv = loadout.level(c.id, s.move.id), sel = !s.fixed && s.idx === state.czSlot ? " sel" : "";
+    return `<button class="cz-slot${sel}" data-slot="${s.fixed ? -1 : s.idx}" style="--accent:${c.accent}">
+      <span class="lv">Lv${lv}</span><span class="sgn">${signOf(s.sign).emoji}</span>
+      <div class="nm">${s.move.short}</div><div class="role">${s.role}</div></button>`;
+  }).join("");
+  els.czSlots.querySelectorAll(".cz-slot").forEach((b) => { const sl = +b.dataset.slot; if (sl >= 0) b.onclick = () => { state.czSlot = sl; audio.play("ui"); renderCustomize(); }; });
+
+  const eqSet = new Set(eq);
+  const items = c.skills.concat([c.ultimate, c.domain]);
+  els.czPool.innerHTML = items.map((sk) => {
+    const lv = loadout.level(c.id, sk.id), cost = loadout.upgradeCost(c.id, sk.id);
+    const dmg = loadout.effective(sk, lv).dmg, eqd = eqSet.has(sk.id);
+    const fixed = sk.id === c.ultimate.id || sk.id === c.domain.id;
+    const badge = eqd ? "equipped" : sk.id === c.ultimate.id ? "ULT" : sk.id === c.domain.id ? "DOM" : "";
+    return `<div class="cz-skill${eqd ? " equipped" : ""}" style="--accent:${c.accent}" data-s="${sk.id}" data-fixed="${fixed ? 1 : 0}">
+      ${badge ? `<span class="eqd">${badge}</span>` : ""}<div class="nm">${sk.short}</div><div class="ds">${sk.desc || ""}</div>
+      <div class="meta"><span class="dmg">${dmg ? "DMG <b>" + dmg + "</b>" : "DEF"} · Lv${lv}</span>
+      <button class="up" data-up="${sk.id}" ${cost == null || loadout.coins() < cost ? "disabled" : ""}>${cost == null ? "MAX" : "⬆ " + cost}</button></div></div>`;
+  }).join("");
+  els.czPool.querySelectorAll(".cz-skill").forEach((card) => {
+    card.onclick = (e) => {
+      if (e.target.closest(".up")) return;
+      if (card.dataset.fixed === "1") return toast("Ultimate & Domain are fixed — upgrade with ⬆");
+      loadout.equip(c.id, state.czSlot, card.dataset.s);
+      state.czSlot = (state.czSlot + 1) % 3;
+      audio.play("ui"); renderCustomize();
+    };
+  });
+  els.czPool.querySelectorAll(".up").forEach((btn) => (btn.onclick = (e) => { e.stopPropagation(); if (loadout.upgrade(c.id, btn.dataset.up)) { audio.play("ui"); renderCustomize(); } else toast("Not enough coins"); }));
+}
+
 /* ---------- UI ---------- */
 function wireUI() {
   document.body.addEventListener("pointerdown", () => audio.unlockAudio(), { once: true });
@@ -596,6 +651,8 @@ function wireUI() {
   });
   els.howToBtn.onclick = () => els.help.classList.remove("hidden");
   els.helpClose.onclick = () => els.help.classList.add("hidden");
+  els.customizeBtn.onclick = () => { audio.play("ui"); openCustomize(); };
+  els.czClose.onclick = () => els.customize.classList.add("hidden");
   els.backBtn.onclick = leaveStage;
   els.captureBtn.onclick = capture;
   els.lookBtn.onclick = () => { state.look = !state.look; els.lookBtn.classList.toggle("active", state.look); if (state.look) ensureFace(); };

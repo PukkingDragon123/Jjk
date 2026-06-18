@@ -3,17 +3,17 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
-  <meta name="theme-color" content="#111016" />
-  <title>呪術 · JUJUTSU WEB</title>
+  <meta name="theme-color" content="#0f1218" />
+  <title>Jujutsu Web — Cursed Energy Camera</title>
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-  <link href="https://fonts.googleapis.com/css2?family=Bangers&family=Permanent+Marker&family=Noto+Sans+JP:wght@700;900&family=Rajdhani:wght@500;600;700&display=swap" rel="stylesheet" />
+  <link href="https://fonts.googleapis.com/css2?family=Oswald:wght@500;600;700&family=Rajdhani:wght@500;600;700&display=swap" rel="stylesheet" />
   <link rel="stylesheet" href="css/style.css" />
 </head>
 <body>
   <!-- ===================== LOADING ===================== -->
   <div id="boot" class="boot">
-    <div class="boot-glyph">呪</div>
+    <div class="boot-emblem">◉</div>
     <div class="boot-title">JUJUTSU&nbsp;WEB</div>
     <div class="boot-bar"><span id="bootBar"></span></div>
     <div id="bootMsg" class="boot-msg">summoning cursed energy…</div>
@@ -25,30 +25,30 @@
     <div class="sakura" aria-hidden="true"><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i></div>
     <header class="menu-head">
       <div class="logo">
-        <span class="logo-jp">呪術廻戦</span>
-        <span class="logo-en">JUJUTSU WEB</span>
+        <span class="logo-en">JUJUTSU&nbsp;KAISEN</span>
+        <span class="logo-sub">cursed energy camera · fan game</span>
       </div>
       <div id="rankBadge" class="rank-badge"><!-- JS --></div>
     </header>
 
     <section class="char-select">
-      <h2 class="section-title">pick your sorcerer</h2>
+      <h2 class="section-title">Pick your sorcerer</h2>
       <div id="charGrid" class="char-grid"><!-- JS --></div>
     </section>
 
     <section class="modes">
       <button class="mode-btn primary" data-mode="campaign">
-        <span class="mode-en">▸ STORY CAMPAIGN</span>
-        <small>fight cursed spirits, climb the grades</small>
+        <span class="mode-en">Story Campaign</span><small>exorcise cursed spirits · climb the grades</small>
       </button>
       <div class="mode-row">
-        <button class="mode-btn" data-mode="ranked"><span class="mode-en">RANKED</span><small>matchmake · cross-play</small></button>
-        <button class="mode-btn" data-mode="versus"><span class="mode-en">VS FRIEND</span><small>room code</small></button>
+        <button class="mode-btn" data-mode="ranked"><span class="mode-en">Ranked</span><small>matchmake · cross-play</small></button>
+        <button class="mode-btn" data-mode="versus"><span class="mode-en">Vs Friend</span><small>room code</small></button>
       </div>
       <div class="mode-row">
-        <button class="mode-btn" data-mode="solo"><span class="mode-en">TRAINING</span><small>free play &amp; photos</small></button>
-        <button class="mode-btn ghost" id="howToBtn"><span class="mode-en">how to play</span></button>
+        <button class="mode-btn" data-mode="solo"><span class="mode-en">Training</span><small>free play &amp; photos</small></button>
+        <button class="mode-btn" id="customizeBtn"><span class="mode-en">Loadout</span><small>equip &amp; upgrade skills</small></button>
       </div>
+      <button class="mode-btn ghost" id="howToBtn"><span class="mode-en">How to play</span></button>
     </section>
     <footer class="menu-foot">fan project · made for fun · not affiliated with the official franchise</footer>
   </main>
@@ -62,7 +62,7 @@
       <button id="backBtn" class="icon-btn" title="Back">⟵</button>
       <div class="char-tag">
         <img id="hudAvatar" class="hud-avatar" alt="" />
-        <span id="hudCharGlyph">無</span><span id="hudCharName">—</span>
+        <span id="hudCharGlyph"></span><span id="hudCharName">—</span>
       </div>
       <div class="ce-wrap" title="Cursed Energy">
         <div class="ce-label">CURSED ENERGY</div>
@@ -71,54 +71,62 @@
       <div id="fps" class="fps">-- fps</div>
     </div>
 
-    <!-- enemy (campaign) -->
     <div id="enemyHud" class="enemy-hud hidden">
       <div class="enemy-emoji" id="enemyEmoji">👁️</div>
-      <div class="enemy-info">
-        <span id="enemyName">Cursed Spirit</span>
-        <div class="hp-bar enemy"><span id="enemyHp"></span></div>
-      </div>
+      <div class="enemy-info"><span id="enemyName">Cursed Spirit</span><div class="hp-bar enemy"><span id="enemyHp"></span></div></div>
       <div id="enemyWarn" class="enemy-warn"></div>
     </div>
 
-    <!-- opponent (versus/ranked) -->
     <div id="versusPanel" class="versus-panel hidden">
       <div class="opp-head"><span id="oppName">Opponent</span><div class="hp-bar"><span id="oppHp"></span></div></div>
       <video id="oppVideo" playsinline autoplay></video>
       <div class="self-head"><span>You</span><div class="hp-bar self"><span id="selfHp"></span></div></div>
     </div>
 
-    <!-- spell history -->
     <div id="history" class="history"></div>
-
     <div id="hint" class="hint"></div>
     <div id="signNow" class="sign-now"></div>
     <div id="techFlash" class="tech-flash"></div>
 
-    <!-- spellbook -->
     <div id="spellbook" class="spellbook"><!-- JS --></div>
 
     <div class="hud hud-bottom">
       <button id="lookBtn" class="pill" title="Hair / hat overlay">👤</button>
-      <button id="cloakBtn" class="pill" title="Cursed cloak">🜂</button>
+      <button id="cloakBtn" class="pill" title="Cursed cloak">✶</button>
       <button id="captureBtn" class="capture" title="Capture photo">◉</button>
       <button id="soundBtn" class="pill" title="Sound">🔊</button>
-      <button id="mirrorBtn" class="pill" title="Mirror">⇋</button>
+      <button id="mirrorBtn" class="pill" title="Mirror">⇄</button>
     </div>
 
     <div id="gallery" class="gallery"></div>
   </div>
 
+  <!-- ===================== LOADOUT / CUSTOMIZE ===================== -->
+  <div id="customize" class="modal hidden">
+    <div class="modal-card wide">
+      <div class="cz-top">
+        <h2>Loadout</h2>
+        <div id="czCoins" class="cz-coins"></div>
+      </div>
+      <div id="czTabs" class="cz-tabs"></div>
+      <div class="cz-label">Equipped — tap a slot, then a skill below to equip</div>
+      <div id="czSlots" class="cz-slots"></div>
+      <div class="cz-label">Skill pool — ⬆ upgrade with cursed coins</div>
+      <div id="czPool" class="cz-pool"></div>
+      <button id="czClose" class="mode-btn primary"><span class="mode-en">Done</span></button>
+    </div>
+  </div>
+
   <!-- ===================== VERSUS LOBBY ===================== -->
   <div id="lobby" class="modal hidden">
     <div class="modal-card">
-      <h2>fight a friend</h2>
+      <h2>Fight a friend</h2>
       <p class="muted">share a room code · both need a camera · works phone↔laptop</p>
-      <div class="lobby-row"><button id="createRoom" class="mode-btn primary"><span class="mode-en">create room</span></button></div>
+      <div class="lobby-row"><button id="createRoom" class="mode-btn primary"><span class="mode-en">Create room</span></button></div>
       <div class="lobby-or">— or —</div>
       <div class="lobby-row join">
         <input id="roomInput" maxlength="8" placeholder="CODE" autocomplete="off" />
-        <button id="joinRoom" class="mode-btn"><span class="mode-en">join</span></button>
+        <button id="joinRoom" class="mode-btn"><span class="mode-en">Join</span></button>
       </div>
       <div id="lobbyCode" class="lobby-code hidden">code: <b id="codeText">----</b> <button id="copyCode" class="mini">copy</button><div class="muted small">waiting…</div></div>
       <div id="lobbyStatus" class="lobby-status"></div>
@@ -129,7 +137,7 @@
   <!-- ===================== RANKED QUEUE ===================== -->
   <div id="queue" class="modal hidden">
     <div class="modal-card">
-      <h2>ranked match</h2>
+      <h2>Ranked match</h2>
       <div id="queueRank" class="queue-rank"></div>
       <div class="queue-spinner"><span></span><span></span><span></span></div>
       <div id="queueStatus" class="lobby-status">finding an opponent…</div>
@@ -141,7 +149,7 @@
   <!-- ===================== STORY ===================== -->
   <div id="story" class="modal hidden">
     <div class="modal-card story-card">
-      <div id="storyGlyph" class="story-glyph">呪</div>
+      <div id="storyGlyph" class="story-glyph">👁️</div>
       <h2 id="storyTitle">Stage</h2>
       <p id="storyText" class="story-text"></p>
       <button id="storyGo" class="mode-btn primary"><span class="mode-en">begin</span></button>
@@ -151,9 +159,9 @@
   <!-- ===================== HOW TO PLAY ===================== -->
   <div id="help" class="modal hidden">
     <div class="modal-card wide">
-      <h2>術式 · how to play</h2>
+      <h2>How to play</h2>
       <div id="helpBody" class="help-body"></div>
-      <button id="helpClose" class="mode-btn primary"><span class="mode-en">got it</span></button>
+      <button id="helpClose" class="mode-btn primary"><span class="mode-en">Got it</span></button>
     </div>
   </div>
 

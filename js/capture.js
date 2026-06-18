@@ -62,11 +62,14 @@ export function composeShot({ video, fxCanvas, character, techName, mirror, artI
     ctx.drawImage(artImg, ax + (gsize - iw) / 2, ay + (gsize - ih) / 2, iw, ih);
     ctx.restore();
   } else {
-    ctx.font = `900 ${gsize}px "Noto Sans JP", sans-serif`;
-    ctx.fillStyle = accent; ctx.shadowColor = accent; ctx.shadowBlur = 20;
-    ctx.fillText(character.glyph, ax, ay); ctx.shadowBlur = 0;
+    ctx.fillStyle = accent; ctx.strokeStyle = "rgba(0,0,0,.4)"; ctx.lineWidth = 3;
+    roundRect(ctx, ax, ay, gsize, gsize, 12); ctx.fill();
+    ctx.fillStyle = "#fff"; ctx.font = `700 ${gsize * 0.6}px "Oswald", sans-serif`;
+    ctx.textAlign = "center"; ctx.textBaseline = "middle";
+    ctx.fillText(character.initial, ax + gsize / 2, ay + gsize / 2);
+    ctx.textAlign = "left"; ctx.textBaseline = "top";
   }
-  ctx.font = `800 ${Math.round(W * 0.038)}px "Bangers","Rajdhani",sans-serif`;
+  ctx.font = `800 ${Math.round(W * 0.038)}px "Oswald","Rajdhani",sans-serif`;
   ctx.fillStyle = "#fff"; ctx.shadowColor = "#000"; ctx.shadowBlur = 6;
   ctx.fillText(character.name, ax + gsize * 1.18, ay + gsize * 0.08);
   ctx.font = `600 ${Math.round(W * 0.024)}px "Rajdhani", sans-serif`;
@@ -85,9 +88,9 @@ export function composeShot({ video, fxCanvas, character, techName, mirror, artI
 
   // watermark (bottom-right)
   ctx.textAlign = "right"; ctx.textBaseline = "bottom";
-  ctx.font = `800 ${Math.round(W * 0.026)}px "Cinzel", serif`;
+  ctx.font = `700 ${Math.round(W * 0.026)}px "Oswald", sans-serif`;
   ctx.fillStyle = "rgba(255,255,255,.75)";
-  ctx.fillText("呪術 · JUJUTSU WEB", W - pad * 1.6, H - pad * 1.6);
+  ctx.fillText("JUJUTSU WEB", W - pad * 1.6, H - pad * 1.6);
   ctx.textAlign = "left";
 
   return c.toDataURL("image/jpeg", 0.92);

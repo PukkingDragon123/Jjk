@@ -7,7 +7,7 @@ export const SLOT_SIGNS = ["fist", "one", "two"]; // loadout slot -> hand sign
 export const CHARACTERS = [
   {
     id: "gojo", name: "Gojo Satoru", initial: "G", title: "Limitless · The Honored One",
-    grade: "Special Grade", accent: "#3aa0ff", art: "assets/gojo.png",
+    grade: "Special Grade", accent: "#3aa0ff", art: "assets/gojo.jpg",
     palette: { a: "#39a0ff", b: "#b14bff", glow: "#bfe3ff" },
     look: { style: "gojo", hair: "#eef1ff", hair2: "#c6ccf0", band: "#171922", aura: "rings" },
     skills: [
@@ -24,7 +24,7 @@ export const CHARACTERS = [
   },
   {
     id: "sukuna", name: "Ryomen Sukuna", initial: "S", title: "King of Curses",
-    grade: "Special Grade", accent: "#ff3b4e", art: "assets/sukuna.png",
+    grade: "Special Grade", accent: "#ff3b4e", art: "assets/sukuna.jpg",
     palette: { a: "#ff3b4e", b: "#ff8a3b", glow: "#ffd0c0" },
     look: { style: "sukuna", hair: "#2a2230", hair2: "#ff4d5e", marks: "#c01230", aura: "claw" },
     skills: [
@@ -41,7 +41,7 @@ export const CHARACTERS = [
   },
   {
     id: "yuji", name: "Yuji Itadori", initial: "Y", title: "Sukuna's Vessel",
-    grade: "Grade 1", accent: "#ff6a6a", art: "assets/yuji.png",
+    grade: "Grade 1", accent: "#ff6a6a", art: "assets/yuji.jpg",
     palette: { a: "#ff6a6a", b: "#3a1414", glow: "#ffd0d0" },
     look: { style: "cap", hair: "#ff9bb0", cap: "#d63347", aura: "spark" },
     skills: [
@@ -58,7 +58,7 @@ export const CHARACTERS = [
   },
   {
     id: "megumi", name: "Megumi Fushiguro", initial: "M", title: "Ten Shadows Technique",
-    grade: "Grade 2", accent: "#7c8bff", art: "assets/megumi.png",
+    grade: "Grade 2", accent: "#7c8bff", art: "assets/megumi.jpg",
     palette: { a: "#7c8bff", b: "#222a5c", glow: "#cfd6ff" },
     look: { style: "spiky", hair: "#1b2138", hair2: "#3c4680", aura: "ink" },
     skills: [

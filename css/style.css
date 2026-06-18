@@ -36,10 +36,42 @@ body::after{content:"";position:fixed;inset:0;pointer-events:none;z-index:99;opa
 /* ============ MENU ============ */
 .menu{position:fixed;inset:0;overflow-y:auto;padding:max(22px,4vh) 18px 36px;z-index:20}
 .menu-bg{position:fixed;inset:0;z-index:-2;background:
-  linear-gradient(180deg,#1a1622,#100d16);}
-.menu-bg::after{content:"呪 術 廻 戦";position:fixed;inset:0;display:grid;place-content:center;
-  font-family:"Noto Sans JP";font-weight:900;font-size:18vw;color:#fff;opacity:.03;letter-spacing:.04em;
-  transform:rotate(-6deg);pointer-events:none;user-select:none;white-space:nowrap}
+  radial-gradient(circle at 50% 26%, rgba(255,90,90,.16), transparent 40%),
+  repeating-conic-gradient(from 0deg at 50% 24%, rgba(255,170,170,.05) 0 3deg, transparent 3deg 12deg),
+  repeating-linear-gradient(90deg, rgba(255,255,255,.022) 0 2px, transparent 2px 66px),
+  repeating-linear-gradient(0deg, rgba(255,255,255,.018) 0 2px, transparent 2px 66px),
+  linear-gradient(180deg,#241a1a,#15100f 58%,#0d0a0c)}
+.menu-bg::before{content:"";position:fixed;left:50%;top:24%;width:42vmin;height:42vmin;
+  transform:translate(-50%,-50%);border-radius:50%;z-index:-1;pointer-events:none;
+  background:radial-gradient(circle,#ff6a6a 0 58%,#d8323f 59% 63%,transparent 64%);opacity:.18;
+  filter:blur(.5px)}
+.menu-bg::after{content:"道";position:fixed;inset:0;display:grid;place-content:center;
+  font-family:"Noto Sans JP";font-weight:900;font-size:46vmin;color:#fff;opacity:.04;
+  pointer-events:none;user-select:none}
+
+/* falling sakura */
+.sakura{position:fixed;inset:0;z-index:-1;pointer-events:none;overflow:hidden}
+.sakura i{position:absolute;top:-8vh;width:13px;height:13px;border-radius:13px 2px 13px 2px;
+  background:radial-gradient(circle at 30% 30%,#ffe1ec,#ff9cc2);opacity:.75;animation:fall linear infinite}
+.sakura i:nth-child(1){left:6%;animation-duration:11s;animation-delay:0s;transform:scale(.8)}
+.sakura i:nth-child(2){left:16%;animation-duration:14s;animation-delay:2s}
+.sakura i:nth-child(3){left:27%;animation-duration:9s;animation-delay:1s;transform:scale(1.2)}
+.sakura i:nth-child(4){left:38%;animation-duration:13s;animation-delay:4s}
+.sakura i:nth-child(5){left:48%;animation-duration:10s;animation-delay:3s;transform:scale(.7)}
+.sakura i:nth-child(6){left:57%;animation-duration:15s;animation-delay:0s}
+.sakura i:nth-child(7){left:66%;animation-duration:8s;animation-delay:2s;transform:scale(1.1)}
+.sakura i:nth-child(8){left:74%;animation-duration:12s;animation-delay:5s}
+.sakura i:nth-child(9){left:82%;animation-duration:10s;animation-delay:1s;transform:scale(.9)}
+.sakura i:nth-child(10){left:90%;animation-duration:13s;animation-delay:3s}
+.sakura i:nth-child(11){left:33%;animation-duration:16s;animation-delay:6s;transform:scale(.8)}
+.sakura i:nth-child(12){left:62%;animation-duration:9s;animation-delay:4s;transform:scale(1.3)}
+@keyframes fall{0%{transform:translateY(-8vh) translateX(0) rotate(0);opacity:0}
+  10%{opacity:.8}50%{transform:translateY(52vh) translateX(7vw) rotate(220deg)}
+  100%{transform:translateY(112vh) translateX(-4vw) rotate(540deg);opacity:.4}}
+
+/* dojo frame around the camera stage */
+.stage::after{content:"";position:absolute;inset:9px;border:2px solid rgba(255,255,255,.1);border-radius:16px;
+  pointer-events:none;z-index:3;box-shadow:inset 0 0 90px rgba(0,0,0,.55),inset 0 0 0 1px rgba(255,90,90,.06)}
 .spray{position:fixed;z-index:-1;border-radius:50%;filter:blur(40px);opacity:.5;pointer-events:none}
 .spray.s1{width:46vw;height:46vw;left:-10vw;top:-6vw;background:radial-gradient(closest-side,var(--purple),transparent)}
 .spray.s2{width:50vw;height:50vw;right:-14vw;bottom:-10vw;background:radial-gradient(closest-side,var(--red),transparent)}

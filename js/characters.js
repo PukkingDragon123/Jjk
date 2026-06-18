@@ -8,6 +8,7 @@ export const CHARACTERS = [
     id: "gojo", name: "Gojo Satoru", glyph: "無", title: "Limitless · The Honored One",
     grade: "Special Grade", accent: "#7b5cff", art: "assets/gojo.png",
     palette: { a: "#39a0ff", b: "#b14bff", glow: "#9ad4ff" },
+    look: { style: "gojo", hair: "#eef1ff", hair2: "#c6ccf0", band: "#171922", aura: "rings" },
     moves: [
       { id: "blue",   name: "Blue",          jp: "蒼", sign: "open", kind: "orb",  sub: "attract", dmg: 14, sfx: "blue",   tier: "basic" },
       { id: "red",    name: "Reversal Red",  jp: "赫", sign: "fist", kind: "burst", sub: "repel",  dmg: 18, sfx: "red",    tier: "basic" },
@@ -22,6 +23,7 @@ export const CHARACTERS = [
     id: "sukuna", name: "Ryomen Sukuna", glyph: "両", title: "King of Curses",
     grade: "Special Grade", accent: "#ff3b4e", art: "assets/sukuna.png",
     palette: { a: "#ff3b4e", b: "#ff8a3b", glow: "#ff9aa2" },
+    look: { style: "sukuna", hair: "#2a2230", hair2: "#ff4d5e", marks: "#c01230", aura: "claw" },
     moves: [
       { id: "dismantle", name: "Dismantle", jp: "解", sign: "one", kind: "slash",    dmg: 14, sfx: "slash",    tier: "basic" },
       { id: "cleave",    name: "Cleave",    jp: "捌", sign: "two", kind: "slashBig", dmg: 22, sfx: "slashBig", tier: "basic" },
@@ -36,6 +38,7 @@ export const CHARACTERS = [
     id: "yuji", name: "Yuji Itadori", glyph: "黒", title: "Sukuna's Vessel",
     grade: "Grade 1", accent: "#ff5a5a", art: "assets/yuji.png",
     palette: { a: "#ff5a5a", b: "#2a1a1a", glow: "#ffd0d0" },
+    look: { style: "cap", hair: "#ff9bb0", cap: "#d63347", aura: "spark" },
     moves: [
       { id: "jab",       name: "Jab",            jp: "拳", sign: "fist", kind: "burst", dmg: 12, sfx: "punch", tier: "basic" },
       { id: "divergent", name: "Divergent Fist", jp: "逕庭拳", sign: "two", kind: "burst", sub: "double", dmg: 16, sfx: "punch", tier: "basic" },
@@ -50,6 +53,7 @@ export const CHARACTERS = [
     id: "megumi", name: "Megumi Fushiguro", glyph: "影", title: "Ten Shadows Technique",
     grade: "Grade 2", accent: "#6b7bff", art: "assets/megumi.png",
     palette: { a: "#6b7bff", b: "#1b2350", glow: "#aeb8ff" },
+    look: { style: "spiky", hair: "#15192a", hair2: "#39406a", aura: "ink" },
     moves: [
       { id: "dogs", name: "Divine Dogs", jp: "玉犬", sign: "one", kind: "beast", dmg: 15, sfx: "beast", tier: "basic" },
       { id: "nue",  name: "Nue",         jp: "鵺",  sign: "two", kind: "burst", sub: "bolt", dmg: 16, sfx: "bolt", tier: "basic" },

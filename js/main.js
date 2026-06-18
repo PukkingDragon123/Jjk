@@ -10,8 +10,12 @@ import { composeShot, postShot } from "./capture.js";
 import * as audio from "./audio.js";
 import * as rank from "./rank.js";
 import { STAGES, Enemy, loadProgress, saveProgress } from "./campaign.js";
+import { FaceTracker, drawLook } from "./overlay.js";
 
 const $ = (s) => document.querySelector(s);
+const TAU = Math.PI * 2;
+const rnd = (a, b) => a + Math.random() * (b - a);
+const pick = (a) => a[(Math.random() * a.length) | 0];
 const HAND_CONNECTIONS = [
   [0,1],[1,2],[2,3],[3,4],[0,5],[5,6],[6,7],[7,8],[9,10],[10,11],[11,12],
   [13,14],[14,15],[15,16],[0,17],[17,18],[18,19],[19,20],[5,9],[9,13],[13,17],
@@ -31,27 +35,29 @@ const els = {
   queue: $("#queue"), queueStatus: $("#queueStatus"), queueRank: $("#queueRank"), queueClose: $("#queueClose"),
   story: $("#story"), storyGlyph: $("#storyGlyph"), storyTitle: $("#storyTitle"), storyText: $("#storyText"), storyGo: $("#storyGo"),
   help: $("#help"), helpBody: $("#helpBody"), helpClose: $("#helpClose"), howToBtn: $("#howToBtn"),
-  cloakBtn: $("#cloakBtn"), captureBtn: $("#captureBtn"), soundBtn: $("#soundBtn"), mirrorBtn: $("#mirrorBtn"), backBtn: $("#backBtn"),
+  lookBtn: $("#lookBtn"), cloakBtn: $("#cloakBtn"), captureBtn: $("#captureBtn"), soundBtn: $("#soundBtn"), mirrorBtn: $("#mirrorBtn"), backBtn: $("#backBtn"),
   gallery: $("#gallery"),
 };
 
 const ctx = els.fx.getContext("2d");
 const tracker = new Tracker();
+const face = new FaceTracker();
 const gestures = new GestureEngine();
 const particles = new ParticleSystem(1400);
 const effects = new EffectManager(particles);
 
 const state = {
-  mode: "menu", char: CHARACTERS[0], mirror: true, cloak: true,
+  mode: "menu", char: CHARACTERS[0], mirror: true, cloak: true, look: true,
   ce: 1, running: false, matchOver: false, invuln: 0,
   selfHp: 100, oppHp: 100, oppChar: "gojo", ranked: false,
   aimPos: null, aim: -Math.PI / 2,
   history: [], recent: [], clock: 0,
-  stageIndex: 0, enemy: null,
+  stageIndex: 0, enemy: null, enemyAnim: { lunge: 0 }, faceEyes: null,
   lastTechName: "", gallery: [],
 };
-let stream = null, versus = null, spellSlots = [];
+let stream = null, versus = null, spellSlots = [], petals = [], faceInit = false;
 const artCache = {};
+function ensureFace() { if (!faceInit && state.look) { faceInit = true; face.init(); } }
 let lastFrame = performance.now(), fpsT = 0, fpsN = 0;
 
 /* ---------- boot ---------- */
@@ -162,8 +168,9 @@ window.addEventListener("resize", resize);
 async function enterStage(mode) {
   try { await ensureCamera(); } catch (e) { return toast("Camera permission needed 📷"); }
   state.mode = mode; state.ce = 1; state.selfHp = 100; state.oppHp = 100; state.matchOver = false;
-  state.invuln = 0; state.history = []; state.recent = [];
+  state.invuln = 0; state.history = []; state.recent = []; state.enemyAnim.lunge = 0;
   particles.clear(); effects.fx.length = 0; renderHistory();
+  if (state.look) ensureFace();
   els.menu.classList.add("hidden"); els.stage.classList.remove("hidden");
   els.versusPanel.classList.toggle("hidden", mode !== "versus");
   els.enemyHud.classList.toggle("hidden", mode !== "campaign");
@@ -200,6 +207,16 @@ function loop(now) {
     g = gestures.process(tracker.detect(els.video, now), makeMap(), now);
   }
   if (g.pos) { state.aimPos = g.pos; state.aim = g.aim; }
+
+  // face overlay (hair / hat)
+  state.faceEyes = null;
+  if (state.look && face.mode === "face" && els.video.readyState >= 2) {
+    const f = face.detect(els.video, now);
+    if (f && f.keypoints && f.keypoints.length >= 2) {
+      const m = makeMap();
+      state.faceEyes = { R: m(f.keypoints[0]), L: m(f.keypoints[1]) };
+    }
+  }
   if (!effects.domainActive) state.ce = Math.min(1, state.ce + dt * 0.09);
   if (state.invuln > 0) state.invuln -= dt;
 
@@ -217,9 +234,13 @@ function loop(now) {
 
   ctx.clearRect(0, 0, W, H);
   ctx.save(); ctx.translate(ox, oy);
+  drawPetals(ctx, W, H, dt);
   effects.renderUnder(ctx, W, H);
+  if (state.mode === "campaign") drawCurse(ctx, W, H, now);
   drawAura(ctx, g.hands); drawHandRig(ctx, g.hands);
-  particles.render(ctx); effects.render(ctx, W, H);
+  particles.render(ctx);
+  if (state.faceEyes) drawLook(ctx, state.faceEyes.R, state.faceEyes.L, state.char.look);
+  effects.render(ctx, W, H);
   ctx.restore();
 
   els.ceFill.style.width = state.ce * 100 + "%";
@@ -236,12 +257,78 @@ function updateSignNow(sign, progress) {
 }
 function drawAura(ctx, hands) {
   if (!hands.length) return;
+  const pal = state.char.palette, style = state.char.look?.aura || "glow", t = performance.now() / 1000;
   ctx.save(); ctx.globalCompositeOperation = "lighter";
   for (const h of hands) {
-    const r = h.palmW * 1.7;
-    const grd = ctx.createRadialGradient(h.center.x, h.center.y, 0, h.center.x, h.center.y, r);
-    grd.addColorStop(0, state.char.palette.glow + "cc"); grd.addColorStop(0.5, state.char.palette.a + "55"); grd.addColorStop(1, "transparent");
-    ctx.fillStyle = grd; ctx.beginPath(); ctx.arc(h.center.x, h.center.y, r, 0, Math.PI * 2); ctx.fill();
+    const x = h.center.x, y = h.center.y, r = h.palmW * 1.7;
+    const grd = ctx.createRadialGradient(x, y, 0, x, y, r);
+    grd.addColorStop(0, pal.glow + "cc"); grd.addColorStop(0.5, pal.a + "55"); grd.addColorStop(1, "transparent");
+    ctx.fillStyle = grd; ctx.beginPath(); ctx.arc(x, y, r, 0, TAU); ctx.fill();
+    if (style === "rings") {              // Gojo — orbiting limitless rings
+      ctx.lineWidth = 2.5;
+      for (let i = 0; i < 2; i++) { ctx.strokeStyle = i ? pal.b : pal.a; ctx.globalAlpha = 0.55; const rr = r * (0.55 + i * 0.32); ctx.beginPath(); ctx.ellipse(x, y, rr, rr * 0.42, t * (1.4 + i), 0, TAU); ctx.stroke(); }
+      ctx.globalAlpha = 1;
+    } else if (style === "claw") {        // Sukuna — slash marks
+      ctx.strokeStyle = "#fff"; ctx.lineWidth = 2;
+      for (let i = -1; i <= 1; i++) { ctx.globalAlpha = 0.6; ctx.beginPath(); ctx.moveTo(x - r * 0.6, y + i * 9 - 2); ctx.quadraticCurveTo(x, y + i * 6, x + r * 0.6, y + i * 11 + 2); ctx.stroke(); }
+      ctx.globalAlpha = 1;
+    } else if (style === "spark") {       // Yuji — cursed lightning
+      ctx.strokeStyle = "#fff"; ctx.lineWidth = 1.6;
+      for (let k = 0; k < 3; k++) { ctx.globalAlpha = Math.random() * 0.6 + 0.2; let a = Math.random() * TAU, cx = x, cy = y; ctx.beginPath(); ctx.moveTo(cx, cy); for (let j = 0; j < 3; j++) { cx += Math.cos(a) * r * 0.4; cy += Math.sin(a) * r * 0.4; a += rnd(-1, 1); ctx.lineTo(cx, cy); } ctx.stroke(); }
+      ctx.globalAlpha = 1;
+    }
+  }
+  if (style === "ink") {                  // Megumi — shadow pooling
+    ctx.globalCompositeOperation = "source-over";
+    for (const h of hands) { ctx.globalAlpha = 0.5; ctx.fillStyle = "#0c0f22"; ctx.beginPath(); ctx.arc(h.center.x, h.center.y, h.palmW * 1.1, 0, TAU); ctx.fill(); if (Math.random() < 0.5) particles.aura(h.center.x, h.center.y, pal.b, 0.8, 1); }
+    ctx.globalAlpha = 1;
+  }
+  ctx.restore();
+}
+
+function newPetal(W, H, seed) {
+  const k = W / 1280;
+  return { x: rnd(0, W), y: seed ? rnd(0, H) : -20, vx: (rnd(-0.3, 0.7) + 0.2) * k, vy: (rnd(0.5, 1.5) + 0.4) * (H / 720), rot: rnd(0, TAU), vr: rnd(-0.04, 0.04), s: rnd(4, 9) * k + 3, a: rnd(0.16, 0.45), c: pick(["#ffd9e6", "#ffc0d8", "#ffe7c8"]) };
+}
+function drawPetals(ctx, W, H, dt) {
+  if (state.mode === "versus") return;
+  if (!petals.length) for (let i = 0; i < 22; i++) petals.push(newPetal(W, H, true));
+  const f = Math.min(3, dt * 60);
+  for (const p of petals) {
+    p.x += p.vx * f; p.y += p.vy * f; p.rot += p.vr * f;
+    if (p.y > H + 24) Object.assign(p, newPetal(W, H, false));
+    ctx.save(); ctx.globalAlpha = p.a; ctx.translate(p.x, p.y); ctx.rotate(p.rot);
+    ctx.fillStyle = p.c; ctx.beginPath(); ctx.ellipse(0, 0, p.s, p.s * 0.55, 0, 0, TAU); ctx.fill();
+    ctx.restore();
+  }
+}
+function drawCurse(ctx, W, H, now) {
+  if (!state.enemy) return;
+  const s = state.enemy.s, t = now / 1000, k = Math.min(W, H) / 720;
+  const lunge = state.enemyAnim.lunge > 0 ? state.enemyAnim.lunge / 0.35 : 0;
+  const cx = W * 0.5, cy = H * 0.3 + Math.sin(t * 2) * 8 * k + lunge * 60 * k;
+  const scale = k * 1.0 * (state.enemy.dead ? 0.5 : 1) * (1 + lunge * 0.18);
+  ctx.save(); ctx.translate(cx, cy); ctx.scale(scale, scale);
+  ctx.globalCompositeOperation = "lighter";
+  const ga = ctx.createRadialGradient(0, 0, 0, 0, 0, 170); ga.addColorStop(0, s.color + "66"); ga.addColorStop(1, "transparent");
+  ctx.fillStyle = ga; ctx.beginPath(); ctx.arc(0, 0, 170, 0, TAU); ctx.fill();
+  ctx.globalCompositeOperation = "source-over";
+  ctx.fillStyle = "#0c0a12"; ctx.strokeStyle = s.color; ctx.lineWidth = 3;
+  ctx.beginPath();
+  const N = 14, R = 100;
+  for (let i = 0; i <= N; i++) { const a = i / N * TAU, r = R * (0.78 + 0.22 * Math.sin(t * 3 + i * 1.7)), x = Math.cos(a) * r, y = Math.sin(a) * r * 0.92; i ? ctx.lineTo(x, y) : ctx.moveTo(x, y); }
+  ctx.closePath(); ctx.fill(); ctx.stroke();
+  for (const [ex, ey] of [[-38, -14], [34, -20], [-8, 20], [56, 6], [-52, 26]]) {
+    ctx.fillStyle = s.color; ctx.beginPath(); ctx.ellipse(ex, ey, 9, 12, 0, 0, TAU); ctx.fill();
+    ctx.fillStyle = "#140008"; ctx.beginPath(); ctx.arc(ex, ey + 1, 3.2, 0, TAU); ctx.fill();
+  }
+  ctx.strokeStyle = "#140008"; ctx.lineWidth = 4; ctx.beginPath(); ctx.moveTo(-30, 52); ctx.quadraticCurveTo(0, 70 + Math.sin(t * 4) * 6, 30, 52); ctx.stroke();
+  if (state.enemy.telegraph > 0) {
+    const kk = 0.75 - state.enemy.telegraph, rr = 130 + kk * 120;
+    ctx.strokeStyle = "#ff3b4e"; ctx.lineWidth = 4; ctx.globalAlpha = Math.min(1, state.enemy.telegraph * 2.5);
+    ctx.beginPath(); ctx.arc(0, 0, rr, 0, TAU); ctx.stroke();
+    ctx.beginPath(); for (let i = 0; i < 3; i++) { const a = -Math.PI / 2 + i * TAU / 3 + kk * 2, x = Math.cos(a) * rr * 0.7, y = Math.sin(a) * rr * 0.7; i ? ctx.lineTo(x, y) : ctx.moveTo(x, y); } ctx.closePath(); ctx.stroke();
+    ctx.globalAlpha = 1;
   }
   ctx.restore();
 }
@@ -349,16 +436,19 @@ function setupStage() {
   hint(`Stage ${state.stageIndex + 1} — exorcise the ${s.name}!`, 2600);
 }
 function updateCampaign(dt) {
+  if (state.enemyAnim.lunge > 0) state.enemyAnim.lunge -= dt;
   if (state.matchOver || !state.enemy) return;
   const ev = state.enemy.update(dt);
   if (ev?.telegraph) { els.enemyWarn.textContent = "⚠ " + ev.telegraph; els.enemyWarn.classList.add("show"); }
   if (ev?.attack) {
     els.enemyWarn.classList.remove("show");
+    state.enemyAnim.lunge = 0.35;
+    const W = els.fx.width, H = els.fx.height, col = state.enemy.s.color;
+    effects.trigger("beast", { x: W / 2, y: H * 0.3, aim: Math.PI / 2, palette: { a: col, b: "#1a0a12", glow: col }, W, H, incoming: true });
     if (state.invuln > 0) { hint("Domain absorbs the attack!"); }
     else {
-      const W = els.fx.width, H = els.fx.height;
-      effects.trigger("burst", { x: W / 2, y: H * 0.6, aim: 0, palette: { a: "#ff3b4e", b: "#8b2bff", glow: "#ff9aa2" }, W, H });
-      effects.punchScreen(16, "#ff3b4e"); audio.play("hit");
+      effects.trigger("burst", { x: W / 2, y: H * 0.62, aim: 0, palette: { a: "#ff3b4e", b: "#8b2bff", glow: "#ff9aa2" }, W, H });
+      effects.punchScreen(18, "#ff3b4e"); audio.play("hit");
       state.selfHp = Math.max(0, state.selfHp - ev.attack.dmg); updateCampaignHp();
       if (state.selfHp <= 0) campaignDefeat();
     }
@@ -508,6 +598,8 @@ function wireUI() {
   els.helpClose.onclick = () => els.help.classList.add("hidden");
   els.backBtn.onclick = leaveStage;
   els.captureBtn.onclick = capture;
+  els.lookBtn.onclick = () => { state.look = !state.look; els.lookBtn.classList.toggle("active", state.look); if (state.look) ensureFace(); };
+  els.lookBtn.classList.toggle("active", state.look);
   els.cloakBtn.onclick = () => { state.cloak = !state.cloak; els.cloakBtn.classList.toggle("active", state.cloak); };
   els.cloakBtn.classList.toggle("active", state.cloak);
   els.mirrorBtn.onclick = () => { state.mirror = !state.mirror; };

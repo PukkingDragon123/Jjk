@@ -65,7 +65,7 @@ export class GestureEngine {
     const dt = Math.min(0.05, Math.max(0.001, (now - this.lastNow) / 1000));
     this.lastNow = now;
     this.swipeCool = Math.max(0, this.swipeCool - dt);
-    const out = { hands: [], sign: null, progress: 0, cast: null, pos: null, aim: -Math.PI / 2, swipe: false };
+    const out = { hands: [], sign: null, progress: 0, cast: null, pos: null, aim: -Math.PI / 2, swipe: false, swipeDir: null };
 
     const raw = result.hands || [];
     if (!raw.length) { this.holdSign = null; this.holdT = 0; this.spent = false; this.window = []; this.prevCenter = null; this.smooth = []; return out; }
@@ -86,7 +86,7 @@ export class GestureEngine {
     // swipe detection (fast horizontal motion of the lead hand)
     if (this.prevCenter) {
       const vx = (hands[0].center.x - this.prevCenter.x) / hands[0].palmW / dt;
-      if (Math.abs(vx) > SWIPE_SPEED && this.swipeCool === 0) { out.swipe = true; this.swipeCool = 0.6; }
+      if (Math.abs(vx) > SWIPE_SPEED && this.swipeCool === 0) { out.swipe = true; out.swipeDir = vx > 0 ? "right" : "left"; this.swipeCool = 0.6; }
     }
     this.prevCenter = hands[0].center;
 

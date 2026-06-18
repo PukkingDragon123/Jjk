@@ -62,13 +62,25 @@ export function drawLook(ctx, eyeR, eyeL, look) {
     ctx.closePath(); ctx.fill(); ctx.stroke();
   };
   const spikes = (col, col2) => {
-    ctx.fillStyle = col; ctx.strokeStyle = ink; ctx.lineWidth = 0.06;
-    for (let i = -5; i <= 5; i++) {
-      const x = i * 0.22, h = 2.0 + Math.abs(((i + 7) % 3) - 1) * 0.5;
-      ctx.beginPath(); ctx.moveTo(x - 0.16, -0.55); ctx.lineTo(x + (i % 2 ? 0.18 : -0.12), -h); ctx.lineTo(x + 0.16, -0.55); ctx.closePath(); ctx.fill(); ctx.stroke();
-    }
+    ctx.lineJoin = "round"; ctx.strokeStyle = ink; ctx.lineWidth = 0.07;
+    // rounded hair base hugging the head
+    ctx.fillStyle = col;
+    ctx.beginPath();
+    ctx.moveTo(-1.22, 0.12);
+    ctx.bezierCurveTo(-1.46, -1.05, -1.05, -1.9, 0, -2.0);
+    ctx.bezierCurveTo(1.05, -1.9, 1.46, -1.05, 1.22, 0.12);
+    ctx.bezierCurveTo(0.7, -0.45, -0.7, -0.45, -1.22, 0.12);
+    ctx.closePath(); ctx.fill(); ctx.stroke();
+    // layered spiky tufts (lighter)
     ctx.fillStyle = col2 || col;
-    ctx.beginPath(); ctx.ellipse(0, -0.7, 1.2, 1.0, 0, Math.PI, TAU); ctx.fill();
+    for (const [tx, ty, w] of [[-0.95, -2.05, 0.55], [-0.48, -2.45, 0.5], [-0.02, -2.6, 0.54], [0.46, -2.45, 0.5], [0.92, -2.08, 0.55]]) {
+      ctx.beginPath(); ctx.moveTo(tx - w * 0.5, -1.25); ctx.lineTo(tx + 0.06, ty); ctx.lineTo(tx + w * 0.5, -1.25); ctx.closePath(); ctx.fill(); ctx.stroke();
+    }
+    // front fringe falling over the brow
+    ctx.fillStyle = col;
+    for (const bx of [-0.6, -0.2, 0.22, 0.62]) {
+      ctx.beginPath(); ctx.moveTo(bx - 0.17, -0.35); ctx.lineTo(bx + 0.06, -1.0); ctx.lineTo(bx + 0.17, -0.35); ctx.closePath(); ctx.fill();
+    }
   };
 
   if (look.style === "gojo") {

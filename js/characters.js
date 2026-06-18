@@ -58,9 +58,9 @@ export const CHARACTERS = [
   },
   {
     id: "megumi", name: "Megumi Fushiguro", initial: "M", title: "Ten Shadows Technique",
-    grade: "Grade 2", accent: "#6b7bff", art: "assets/megumi.png",
-    palette: { a: "#6b7bff", b: "#1b2350", glow: "#cfd6ff" },
-    look: { style: "spiky", hair: "#15192a", hair2: "#39406a", aura: "ink" },
+    grade: "Grade 2", accent: "#7c8bff", art: "assets/megumi.png",
+    palette: { a: "#7c8bff", b: "#222a5c", glow: "#cfd6ff" },
+    look: { style: "spiky", hair: "#1b2138", hair2: "#3c4680", aura: "ink" },
     skills: [
       { id: "dogs",    name: "Divine Dogs",   short: "DIVINE DOGS", kind: "beast", dmg: 15, sfx: "beast", desc: "Twin shadow hounds rush the target." },
       { id: "nue",     name: "Nue",           short: "NUE",         kind: "burst", sub: "bolt", dmg: 16, sfx: "bolt", desc: "A shadow bird strikes with lightning." },

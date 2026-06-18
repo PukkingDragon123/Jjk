@@ -49,12 +49,12 @@ try {
   await page.screenshot({ path: "test/shot-story.png" });
   await page.click("#storyGo");
   await page.waitForSelector("#stage:not(.hidden)");
-  await page.waitForSelector("#enemyHud:not(.hidden)", { timeout: 6000 });
+  await page.waitForSelector("#p2wrap:not(.hidden)", { timeout: 6000 });
   console.log("✓ campaign stage + enemy HUD");
   await page.waitForTimeout(900);
   const spells = await page.$$(".spell");
   console.log(`✓ spellbook has ${spells.length} spells`);
-  const hpRatio = () => page.$eval("#enemyHp", (e) => e.getBoundingClientRect().width / e.parentElement.getBoundingClientRect().width);
+  const hpRatio = () => page.$eval("#p2Hp", (e) => e.getBoundingClientRect().width / e.parentElement.getBoundingClientRect().width);
   const hpBefore = await hpRatio();
   await page.click(".spell:nth-child(1)"); // single basic — should NOT kill
   await page.waitForTimeout(350);

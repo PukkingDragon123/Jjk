@@ -7,7 +7,7 @@
   <title>Jujutsu Web — Cursed Energy Camera</title>
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-  <link href="https://fonts.googleapis.com/css2?family=Shippori+Mincho:wght@600;700;800&family=Oswald:wght@500;600;700&family=Rajdhani:wght@500;600;700&display=swap" rel="stylesheet" />
+  <link href="https://fonts.googleapis.com/css2?family=Anton&family=Oswald:wght@500;600;700&family=Rajdhani:wght@500;600;700&display=swap" rel="stylesheet" />
   <link rel="stylesheet" href="css/style.css" />
 </head>
 <body>
@@ -58,30 +58,33 @@
     <video id="video" playsinline autoplay muted></video>
     <canvas id="fx"></canvas>
 
-    <div class="hud hud-top">
-      <button id="backBtn" class="icon-btn" title="Back">⟵</button>
-      <div class="char-tag">
-        <img id="hudAvatar" class="hud-avatar" alt="" />
-        <span id="hudCharGlyph"></span><span id="hudCharName">—</span>
+    <!-- arena-fighter HUD -->
+    <div class="fight-hud">
+      <div class="fighter p1">
+        <div class="badge"><img id="p1Avatar" class="badge-img" alt="" /><span id="p1Init">Y</span></div>
+        <div class="bars">
+          <div class="nameplate" id="p1Name">Player</div>
+          <div class="hpbar"><span id="p1Hp"></span></div>
+          <div class="special" title="Cursed Energy"><span id="specialFill"></span><em>SPECIAL</em></div>
+          <div class="bursts" id="burstPips" title="Surge — full unlocks your Domain"></div>
+        </div>
       </div>
-      <div class="ce-wrap">
-        <div class="meter" title="Cursed Energy — spent to cast"><span class="ce-label">CURSED ENERGY</span><div class="ce-bar"><span id="ceFill"></span></div></div>
-        <div class="meter" title="Surge — fills as you fight; unleash your Domain when full"><span class="ce-label surge">SURGE</span><div class="ce-bar sg"><span id="surgeFill"></span></div></div>
+      <div class="fighter p2 hidden" id="p2wrap">
+        <div class="bars right">
+          <div class="nameplate" id="p2Name">Opponent</div>
+          <div class="hpbar rev"><span id="p2Hp"></span></div>
+        </div>
+        <div class="badge"><img id="p2Avatar" class="badge-img" alt="" /><span id="p2Init">?</span></div>
       </div>
-      <div id="fps" class="fps">-- fps</div>
     </div>
 
-    <div id="enemyHud" class="enemy-hud hidden">
-      <div class="enemy-emoji" id="enemyEmoji">👁️</div>
-      <div class="enemy-info"><span id="enemyName">Cursed Spirit</span><div class="hp-bar enemy"><span id="enemyHp"></span></div></div>
-      <div id="enemyWarn" class="enemy-warn"></div>
-    </div>
+    <button id="backBtn" class="icon-btn" title="Back">⟵</button>
+    <div id="fps" class="fps">-- fps</div>
+    <video id="oppVideo" class="opp-pip hidden" playsinline autoplay></video>
 
-    <div id="versusPanel" class="versus-panel hidden">
-      <div class="opp-head"><span id="oppName">Opponent</span><div class="hp-bar"><span id="oppHp"></span></div></div>
-      <video id="oppVideo" playsinline autoplay></video>
-      <div class="self-head"><span>You</span><div class="hp-bar self"><span id="selfHp"></span></div></div>
-    </div>
+    <div id="combo" class="combo"><b id="comboN">0</b><span>HITS</span></div>
+    <div id="statusTag" class="status-tag"></div>
+    <div id="banner" class="banner"></div>
 
     <div id="history" class="history"></div>
     <div id="hint" class="hint"></div>

@@ -330,6 +330,50 @@ const TECH = {
     };
   },
 
+  // ---- cursed flames (blue flame when palette is blue) ----
+  flame(o, mgr) {
+    const { ox, oy, aim } = beamGeom(o);
+    const cool = o.warm ? "#ff7b2e" : (o.palette.a);
+    const hot = o.warm ? "#ffd23b" : (o.palette.glow || "#cfeaff");
+    let x = ox, y = oy; const sp = 11, L = Math.hypot(o.W, o.H) * 0.5; let dist = 0;
+    return {
+      dur: 0.9,
+      update(dt, ps) {
+        if (!this.lit) { this.lit = true; mgr.punchScreen(7, hot); }
+        if (dist < L && this.t < 0.45) {
+          x += Math.cos(aim) * sp; y += Math.sin(aim) * sp; dist += sp;
+          for (let i = 0; i < 5; i++) { ps.flame(x, y, Math.random() < 0.5 ? cool : hot, 1.4, 1); }
+          ps.spawn({ x, y, vx: Math.cos(aim) * 2, vy: Math.sin(aim) * 2, life: 0.3, size: 7, color: "#fff", glow: 1.6, shape: "dot", drag: 0.85 });
+        } else if (!this.boomed) { this.boomed = true; ps.burst(x, y, hot, 1.6, 40, 9); ps.ring(x, y, cool, 1.3, 30, 6); mgr.punchScreen(9, hot); }
+      },
+      render(ctx) {
+        if (this.boomed || dist < 6) return;
+        ctx.save(); ctx.globalCompositeOperation = "lighter";
+        const g = ctx.createRadialGradient(x, y, 0, x, y, 34);
+        g.addColorStop(0, "#fff"); g.addColorStop(0.35, hot); g.addColorStop(1, "transparent");
+        ctx.fillStyle = g; ctx.beginPath(); ctx.arc(x, y, 34, 0, TAU); ctx.fill();
+        ctx.restore();
+      },
+    };
+  },
+
+  // ---- counter / parry flash ----
+  parry(o, mgr) {
+    const x = o.x, y = o.y, c = o.palette.glow || "#cfeaff";
+    return {
+      dur: 0.5,
+      update(dt, ps) { if (!this.k) { this.k = true; ps.ring(x, y, "#fff", 1.6, 40, 9); ps.burst(x, y, c, 1.5, 28, 10, "spark"); mgr.punchScreen(14, "#fff"); } },
+      render(ctx) {
+        const t = this.t / this.dur, a = Math.max(0, 1 - t), R = ease(t) * 110;
+        ctx.save(); ctx.globalCompositeOperation = "lighter"; ctx.globalAlpha = a;
+        ctx.strokeStyle = "#fff"; ctx.lineWidth = 5 * a + 1; ctx.beginPath(); ctx.arc(x, y, R, 0, TAU); ctx.stroke();
+        ctx.lineWidth = 3; ctx.strokeStyle = c;
+        for (let i = 0; i < 4; i++) { const ang = i * Math.PI / 2 + Math.PI / 4; ctx.beginPath(); ctx.moveTo(x + Math.cos(ang) * R * 0.5, y + Math.sin(ang) * R * 0.5); ctx.lineTo(x + Math.cos(ang) * R, y + Math.sin(ang) * R); ctx.stroke(); }
+        ctx.restore();
+      },
+    };
+  },
+
   // ---- guard / shield (Infinity) ----
   guard(o, mgr) {
     const x = o.x, y = o.y, c = o.palette.a, c2 = o.palette.glow;

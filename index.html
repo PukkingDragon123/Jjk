@@ -7,7 +7,7 @@
   <title>Jujutsu Web — Cursed Energy Camera</title>
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-  <link href="https://fonts.googleapis.com/css2?family=Oswald:wght@500;600;700&family=Rajdhani:wght@500;600;700&display=swap" rel="stylesheet" />
+  <link href="https://fonts.googleapis.com/css2?family=Shippori+Mincho:wght@600;700;800&family=Oswald:wght@500;600;700&family=Rajdhani:wght@500;600;700&display=swap" rel="stylesheet" />
   <link rel="stylesheet" href="css/style.css" />
 </head>
 <body>
@@ -64,9 +64,9 @@
         <img id="hudAvatar" class="hud-avatar" alt="" />
         <span id="hudCharGlyph"></span><span id="hudCharName">—</span>
       </div>
-      <div class="ce-wrap" title="Cursed Energy">
-        <div class="ce-label">CURSED ENERGY</div>
-        <div class="ce-bar"><span id="ceFill"></span></div>
+      <div class="ce-wrap">
+        <div class="meter" title="Cursed Energy — spent to cast"><span class="ce-label">CURSED ENERGY</span><div class="ce-bar"><span id="ceFill"></span></div></div>
+        <div class="meter" title="Surge — fills as you fight; unleash your Domain when full"><span class="ce-label surge">SURGE</span><div class="ce-bar sg"><span id="surgeFill"></span></div></div>
       </div>
       <div id="fps" class="fps">-- fps</div>
     </div>
@@ -86,6 +86,7 @@
     <div id="history" class="history"></div>
     <div id="hint" class="hint"></div>
     <div id="signNow" class="sign-now"></div>
+    <button id="qte" class="qte"><div class="qte-ring"><span id="qteSign"></span></div><div class="qte-label">COUNTER!</div></button>
     <div id="techFlash" class="tech-flash"></div>
 
     <div id="spellbook" class="spellbook"><!-- JS --></div>

@@ -115,6 +115,18 @@ export class ParticleSystem {
     }
   }
 
+  // rising cursed flames (blue when given a blue colour)
+  flame(x, y, color, glow = 1.4, n = 3) {
+    for (let i = 0; i < n; i++) {
+      this.spawn({
+        x: x + rand(-10, 10), y: y + rand(-4, 6),
+        vx: rand(-0.8, 0.8), vy: rand(-3.6, -1.8),
+        life: rand(0.35, 0.7), size: rand(3, 6), grow: -0.06,
+        color, glow, shape: "dot", drag: 0.9, grav: -0.06,
+      });
+    }
+  }
+
   shards(x, y, color, glow, n = 16, power = 10) {
     for (let i = 0; i < n; i++) {
       const a = rand(0, Math.PI * 2), s = rand(power * 0.4, power);

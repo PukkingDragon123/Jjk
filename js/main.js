@@ -26,7 +26,8 @@ const els = {
   boot: $("#boot"), bootBar: $("#bootBar"), bootMsg: $("#bootMsg"),
   menu: $("#menu"), charGrid: $("#charGrid"), rankBadge: $("#rankBadge"),
   stage: $("#stage"), video: $("#video"), fx: $("#fx"),
-  ceFill: $("#ceFill"), fps: $("#fps"), hint: $("#hint"), techFlash: $("#techFlash"), signNow: $("#signNow"),
+  ceFill: $("#ceFill"), surgeFill: $("#surgeFill"), fps: $("#fps"), hint: $("#hint"), techFlash: $("#techFlash"), signNow: $("#signNow"),
+  qte: $("#qte"), qteSign: $("#qteSign"),
   hudCharGlyph: $("#hudCharGlyph"), hudCharName: $("#hudCharName"), hudAvatar: $("#hudAvatar"),
   spellbook: $("#spellbook"), history: $("#history"),
   enemyHud: $("#enemyHud"), enemyEmoji: $("#enemyEmoji"), enemyName: $("#enemyName"), enemyHp: $("#enemyHp"), enemyWarn: $("#enemyWarn"),
@@ -50,7 +51,8 @@ const effects = new EffectManager(particles);
 
 const state = {
   mode: "menu", char: CHARACTERS[0], mirror: true, cloak: true, look: true,
-  ce: 1, running: false, matchOver: false, invuln: 0,
+  ce: 1, surge: 0, running: false, matchOver: false, invuln: 0,
+  qte: null, curSign: null,
   selfHp: 100, oppHp: 100, oppChar: "gojo", ranked: false,
   aimPos: null, aim: -Math.PI / 2,
   history: [], recent: [], clock: 0,
@@ -114,15 +116,16 @@ function buildCharGrid() {
 }
 function buildHelp() {
   const rows = [
-    ["🤚", "Cast with hand signs", "Each spell has a sign shown in the spellbook. Hold the sign for a moment to cast it."],
-    ["✋✊", "Basics", "Form the sign (open palm, fist, one finger, two fingers) shown under each basic spell."],
-    ["👐", "Ultimate", "Open BOTH hands together — costs cursed energy (the bar at the top)."],
-    ["🙏", "Domain", "Clasp BOTH hands when your energy is FULL to expand your Domain."],
+    ["🤚", "Cast with hand signs", "Each spell shows its sign in the spellbook. Hold the sign briefly to cast — detection is smoothed so it's steady."],
+    ["✋✊", "Basics", "Open palm / fist / one finger / two fingers cast your three equipped skills. They cost Cursed Energy (blue bar)."],
+    ["👐", "Ultimate", "Open BOTH hands together for your ultimate — spends a chunk of Cursed Energy."],
+    ["🙏", "Domain", "Clasp BOTH hands when the SURGE meter (gold bar) is FULL to expand your Domain."],
+    ["⚡", "Surge", "Surge fills as you land and take hits. Full Surge = Domain ready."],
+    ["⚔️", "Counter (QTE)", "When a curse winds up, a prompt shows a sign — make that sign (or tap it) in time to parry and counter-hit."],
+    ["↪", "Dodge", "Swipe your hand sideways for a quick dodge with brief invulnerability."],
     ["🔗", "Combos", "Land three basic skills in a row to unleash your character's combo finisher."],
-    ["🛠️", "Loadout", "Equip 3 skills into your slots and upgrade them with cursed coins (earned by winning)."],
-    ["👆", "No camera AI?", "Just tap a spell card in the spellbook — works on any device."],
-    ["👹", "Campaign", "Fight cursed spirits across a short story. Read their attack rhythm and time your domain."],
-    ["⚔️", "Ranked / Versus", "Battle real people cross-play — matchmaking or a room code."],
+    ["🛠️", "Loadout", "Equip 3 skills and upgrade them with cursed coins (earned by winning)."],
+    ["👆", "No camera AI?", "Tap a spell card to cast, and tap the counter prompt — works on any device."],
   ];
   els.helpBody.innerHTML = rows.map(([g, t, d]) => `<div class="help-row"><div class="g">${g}</div><div><b>${t}</b><p>${d}</p></div></div>`).join("");
 }
@@ -144,7 +147,7 @@ function buildSpellbook() {
 }
 function updateSpellbook(activeSign, progress) {
   for (const s of spellSlots) {
-    const locked = s.move.cost && state.ce < s.move.cost;
+    const locked = s.move.tier === "domain" ? state.surge < 1 : (s.move.cost && state.ce < s.move.cost);
     s.el.classList.toggle("locked", !!locked);
     const active = activeSign && s.move.sign === activeSign;
     s.el.classList.toggle("active", !!active);
@@ -173,8 +176,8 @@ window.addEventListener("resize", resize);
 /* ---------- stage ---------- */
 async function enterStage(mode) {
   try { await ensureCamera(); } catch (e) { return toast("Camera permission needed 📷"); }
-  state.mode = mode; state.ce = 1; state.selfHp = 100; state.oppHp = 100; state.matchOver = false;
-  state.invuln = 0; state.history = []; state.recent = []; state.enemyAnim.lunge = 0;
+  state.mode = mode; state.ce = 1; state.surge = 0; state.selfHp = 100; state.oppHp = 100; state.matchOver = false;
+  state.invuln = 0; state.history = []; state.recent = []; state.enemyAnim.lunge = 0; clearQte();
   particles.clear(); effects.fx.length = 0; renderHistory();
   if (state.look) ensureFace();
   els.menu.classList.add("hidden"); els.stage.classList.remove("hidden");
@@ -223,13 +226,19 @@ function loop(now) {
       state.faceEyes = { R: m(f.keypoints[0]), L: m(f.keypoints[1]) };
     }
   }
-  if (!effects.domainActive) state.ce = Math.min(1, state.ce + dt * 0.09);
+  if (!effects.domainActive) state.ce = Math.min(1, state.ce + dt * 0.16);
+  state.surge = Math.min(1, state.surge + dt * 0.04);
   if (state.invuln > 0) state.invuln -= dt;
+  state.curSign = g.sign;
+  if (g.swipe) dodge();
 
   if (g.cast) { const m = bookBySign(g.cast); if (m) cast(m, {}); }
 
-  // ambient aura at hands
-  for (const h of g.hands) particles.aura(h.center.x, h.center.y, state.char.palette.glow, 1, state.cloak ? 2 : 1);
+  // ambient cursed energy at the hands — blue cursed flames when the cloak is on
+  for (const h of g.hands) {
+    if (state.cloak) particles.flame(h.center.x, h.center.y, Math.random() < 0.5 ? "#5aa8ff" : "#bfe3ff", 1.4, 2);
+    else particles.aura(h.center.x, h.center.y, state.char.palette.glow, 1, 1);
+  }
 
   if (state.mode === "campaign") updateCampaign(dt);
 
@@ -250,6 +259,8 @@ function loop(now) {
   ctx.restore();
 
   els.ceFill.style.width = state.ce * 100 + "%";
+  els.surgeFill.style.width = state.surge * 100 + "%";
+  els.surgeFill.parentElement.classList.toggle("full", state.surge >= 1);
   updateSpellbook(g.sign, g.progress);
   updateSignNow(g.sign, g.progress);
   fpsN++; fpsT += dt; if (fpsT >= 0.5) { els.fps.textContent = Math.round(fpsN / fpsT) + " fps"; fpsN = 0; fpsT = 0; }
@@ -362,9 +373,14 @@ function cast(move, opts = {}) {
 function doCast(move, pos, aim, { incoming = false, fromCharId = null, combo = false } = {}) {
   const char = incoming ? getCharacter(fromCharId || state.oppChar) : state.char;
   if (!incoming) {
-    const cost = move.cost || 0;
-    if (cost && state.ce < cost) { hint("Not enough cursed energy for " + move.name); return false; }
-    state.ce = Math.max(0, state.ce - cost);
+    if (move.tier === "domain") {
+      if (state.surge < 1) { hint("Domain needs a full SURGE meter"); return false; }
+      state.surge = 0;
+    } else {
+      const cost = move.cost || 0;
+      if (cost && state.ce < cost) { hint("Not enough cursed energy for " + move.short); return false; }
+      state.ce = Math.max(0, state.ce - cost);
+    }
   }
   const W = els.fx.width, H = els.fx.height;
   if (move.kind === "guard") { // defensive skill (e.g. Gojo's Infinity)
@@ -379,6 +395,7 @@ function doCast(move, pos, aim, { incoming = false, fromCharId = null, combo = f
   if (!incoming) {
     state.lastTechName = move.name;
     pushHistory(move, combo);
+    if (move.dmg) state.surge = Math.min(1, state.surge + 0.1); // landing hits builds Surge
     if (move.tier === "domain") state.invuln = 2.4;
     if (state.mode === "campaign" && state.enemy && !state.enemy.dead) {
       if (state.enemy.damage(move.dmg)) campaignClear(); updateCampaignHp();
@@ -444,23 +461,56 @@ function setupStage() {
   updateCampaignHp();
   hint(`Stage ${state.stageIndex + 1} — exorcise the ${s.name}!`, 2600);
 }
+function startQte(dur) {
+  const need = pick(["fist", "open", "one", "two"]);
+  state.qte = { need, t: 0, dur, hold: 0, done: false };
+  els.qteSign.textContent = signOf(need).emoji;
+  els.qte.style.setProperty("--p", 1);
+  els.qte.classList.add("show");
+}
+function clearQte() { state.qte = null; if (els.qte) els.qte.classList.remove("show"); }
+function counterSuccess() {
+  if (!state.qte || state.qte.done) return;
+  state.qte.done = "counter";
+  els.qte.classList.remove("show");
+  const W = els.fx.width, H = els.fx.height;
+  effects.trigger("parry", { x: W / 2, y: H * 0.42, palette: state.char.palette, W, H });
+  audio.play("flash"); state.surge = Math.min(1, state.surge + 0.25);
+  flashTech("COUNTER", "#ffffff"); hint("⚔ Perfect counter!");
+  if (state.enemy && !state.enemy.dead) { if (state.enemy.damage(22)) campaignClear(); updateCampaignHp(); }
+}
+function dodge() {
+  if (state.invuln > 0.3) return;
+  state.invuln = Math.max(state.invuln, 0.6);
+  const W = els.fx.width, H = els.fx.height;
+  effects.punchScreen(6);
+  particles.burst(W * 0.5, H * 0.55, state.char.palette.glow, 1.2, 16, 9, "streak");
+  hint("↪ Dodge!"); audio.play("ui");
+}
 function updateCampaign(dt) {
   if (state.enemyAnim.lunge > 0) state.enemyAnim.lunge -= dt;
+  if (state.qte && !state.qte.done) {
+    state.qte.t += dt;
+    els.qte.style.setProperty("--p", Math.max(0, 1 - state.qte.t / state.qte.dur));
+    if (state.curSign === state.qte.need) { state.qte.hold += dt; if (state.qte.hold >= 0.12) counterSuccess(); }
+    else state.qte.hold = Math.max(0, state.qte.hold - dt * 0.5);
+  }
   if (state.matchOver || !state.enemy) return;
   const ev = state.enemy.update(dt);
-  if (ev?.telegraph) { els.enemyWarn.textContent = "⚠ " + ev.telegraph; els.enemyWarn.classList.add("show"); }
+  if (ev?.telegraph) { els.enemyWarn.textContent = "⚠ " + ev.telegraph; els.enemyWarn.classList.add("show"); startQte(0.72); }
   if (ev?.attack) {
     els.enemyWarn.classList.remove("show");
     state.enemyAnim.lunge = 0.35;
     const W = els.fx.width, H = els.fx.height, col = state.enemy.s.color;
+    const countered = state.qte && state.qte.done === "counter";
+    clearQte();
+    if (countered) return;
     effects.trigger("beast", { x: W / 2, y: H * 0.3, aim: Math.PI / 2, palette: { a: col, b: "#1a0a12", glow: col }, W, H, incoming: true });
-    if (state.invuln > 0) { hint("Domain absorbs the attack!"); }
-    else {
-      effects.trigger("burst", { x: W / 2, y: H * 0.62, aim: 0, palette: { a: "#ff3b4e", b: "#8b2bff", glow: "#ff9aa2" }, W, H });
-      effects.punchScreen(18, "#ff3b4e"); audio.play("hit");
-      state.selfHp = Math.max(0, state.selfHp - ev.attack.dmg); updateCampaignHp();
-      if (state.selfHp <= 0) campaignDefeat();
-    }
+    if (state.invuln > 0) { hint("↪ Dodged!"); return; }
+    effects.trigger("burst", { x: W / 2, y: H * 0.62, aim: 0, palette: { a: "#ff3b4e", b: "#8b2bff", glow: "#ff9aa2" }, W, H });
+    effects.punchScreen(18, "#ff3b4e"); audio.play("hit");
+    state.selfHp = Math.max(0, state.selfHp - ev.attack.dmg); state.surge = Math.min(1, state.surge + 0.16); updateCampaignHp();
+    if (state.selfHp <= 0) campaignDefeat();
   }
 }
 function updateCampaignHp() {
@@ -655,6 +705,7 @@ function wireUI() {
   els.czClose.onclick = () => els.customize.classList.add("hidden");
   els.backBtn.onclick = leaveStage;
   els.captureBtn.onclick = capture;
+  els.qte.onclick = () => { if (state.qte && !state.qte.done) counterSuccess(); };
   els.lookBtn.onclick = () => { state.look = !state.look; els.lookBtn.classList.toggle("active", state.look); if (state.look) ensureFace(); };
   els.lookBtn.classList.toggle("active", state.look);
   els.cloakBtn.onclick = () => { state.cloak = !state.cloak; els.cloakBtn.classList.toggle("active", state.cloak); };

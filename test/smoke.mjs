@@ -79,10 +79,10 @@ try {
   const comboN = await page.$$eval("#history .h.combo", (n) => n.length);
   console.log(`✓ history ${histN} entries, combo finishers: ${comboN}`);
   if (histN < 3) throw new Error("spell history not recording");
-  await page.click(".spell:nth-child(5)"); // domain (energy starts full)
+  await page.click(".spell:nth-child(4)"); // ultimate (spends cursed energy)
   await page.waitForTimeout(700);
   const fps = await page.$eval("#fps", (e) => e.textContent);
-  console.log("✓ solo combo + domain cast, fps:", fps);
+  console.log("✓ solo combo + ultimate cast, fps:", fps);
   await page.screenshot({ path: "test/shot-stage.png" });
   await page.click("#backBtn");
 

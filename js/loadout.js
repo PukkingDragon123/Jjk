@@ -65,10 +65,11 @@ export function activeBook(char) {
     const base = skillById(char, id) || char.skills[i];
     const m = effective(base, level(char.id, base.id));
     m.sign = SLOT_SIGNS[i]; m.tier = m.kind === "guard" ? "utility" : "basic"; m.slot = i;
+    m.cost = base.cost ?? 0.1;       // cursed-energy (mana) cost
     return m;
   });
-  const u = effective(char.ultimate, level(char.id, char.ultimate.id)); u.sign = "double"; u.tier = "ultimate"; u.cost = char.ultimate.cost;
-  const d = effective(char.domain, level(char.id, char.domain.id)); d.sign = "pray"; d.tier = "domain"; d.cost = char.domain.cost;
+  const u = effective(char.ultimate, level(char.id, char.ultimate.id)); u.sign = "double"; u.tier = "ultimate"; u.cost = char.ultimate.cost ?? 0.45;
+  const d = effective(char.domain, level(char.id, char.domain.id)); d.sign = "pray"; d.tier = "domain"; d.cost = 0; d.surge = 1; // Domain consumes the Surge meter
   book.push(u, d);
   return book;
 }

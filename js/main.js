@@ -219,6 +219,11 @@ function freeInput(sign) {
 function inputSign(sign) {
   // light the palette key
   const key = els.palette.querySelector(`.pkey[data-sign="${sign}"]`); if (key) { key.classList.add("lit"); setTimeout(() => key.classList.remove("lit"), 200); }
+  // juice: a quick energy pop where the hand is (or centre)
+  const px = state.aimPos ? state.aimPos.x : els.fx.width / 2, py = state.aimPos ? state.aimPos.y : els.fx.height * 0.6;
+  particles.ring(px, py, state.char.palette.glow, 1.2, 16, 5);
+  particles.burst(px, py, state.char.palette.a, 1.1, 8, 6, "spark");
+  effects.punchScreen(4);
   if (state.mode === "trial") trialInput(sign);
   else freeInput(sign);
 }
@@ -295,8 +300,8 @@ function loop(now) {
     bctxB.clearRect(0, 0, bloomB.width, bloomB.height); bctxB.drawImage(bloomA, 0, 0, bloomB.width, bloomB.height);
     ctx.save();
     ctx.globalCompositeOperation = "lighter"; ctx.imageSmoothingEnabled = true; ctx.imageSmoothingQuality = "high";
-    ctx.globalAlpha = 0.5; ctx.drawImage(bloomB, 0, 0, W, H);
-    ctx.globalAlpha = 0.35; ctx.drawImage(bloomA, 0, 0, W, H);
+    ctx.globalAlpha = 0.62; ctx.drawImage(bloomB, 0, 0, W, H);
+    ctx.globalAlpha = 0.42; ctx.drawImage(bloomA, 0, 0, W, H);
     ctx.globalAlpha = 1;
     ctx.restore();
   }

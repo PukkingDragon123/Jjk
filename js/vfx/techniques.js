@@ -31,10 +31,25 @@ function crescent(ctx, x, y, ang, len, thick, color, a) {
   ctx.lineWidth = 2.5; ctx.strokeStyle = color; ctx.stroke();
   ctx.restore();
 }
-// the core anime explosion render (white frame -> shockwave rings)
+function softDisc(ctx, x, y, r, color, a) {
+  if (a <= 0 || r <= 0) return;
+  ctx.save(); ctx.globalCompositeOperation = "lighter"; ctx.globalAlpha = a;
+  const g = ctx.createRadialGradient(x, y, 0, x, y, r);
+  g.addColorStop(0, color); g.addColorStop(1, "rgba(0,0,0,0)");
+  ctx.fillStyle = g; ctx.beginPath(); ctx.arc(x, y, r, 0, TAU); ctx.fill(); ctx.restore();
+}
+function bolt(ctx, x1, y1, x2, y2, color, a, seg) {
+  if (a <= 0) return;
+  ctx.save(); ctx.globalCompositeOperation = "lighter"; ctx.globalAlpha = a; ctx.strokeStyle = color; ctx.lineWidth = 2.2; ctx.lineCap = "round";
+  ctx.beginPath(); ctx.moveTo(x1, y1);
+  const n = seg || 5; for (let i = 1; i < n; i++) { const t = i / n; ctx.lineTo(x1 + (x2 - x1) * t + (Math.random() - 0.5) * 28, y1 + (y2 - y1) * t + (Math.random() - 0.5) * 28); }
+  ctx.lineTo(x2, y2); ctx.stroke(); ctx.restore();
+}
+// the core anime explosion render (soft shock glow -> white frame -> shockwave rings)
 function explosionRender(ctx, x, y, t, dur, color, big) {
   const k = big ? 1.5 : 1, p = t / dur, R = ease(p) * 120 * k;
-  if (p < 0.16) flashCircle(ctx, x, y, (1 - p / 0.16) * 72 * k, 1);
+  softDisc(ctx, x, y, (40 + ease(p) * 130) * k, color, (1 - p) * 0.5);
+  if (p < 0.16) flashCircle(ctx, x, y, (1 - p / 0.16) * 74 * k, 1);
   hardRing(ctx, x, y, R, (1 - p) * 7 + 1, "#fff", (1 - p) * 0.9);
   hardRing(ctx, x, y, R * 0.78, (1 - p) * 4 + 1, color, (1 - p) * 0.8);
   if (big && p < 0.32) speedLines(ctx, x, y, 46, 46 + ease(p) * 170, 16, "#fff", 1 - p / 0.32);
@@ -154,7 +169,9 @@ const TECH = {
         ctx.strokeStyle = cA; ctx.lineWidth = 46; ctx.globalAlpha = fade * 0.4; ctx.beginPath(); ctx.moveTo(ox, oy); ctx.lineTo(ex, ey); ctx.stroke();
         ctx.globalAlpha = fade;
         ctx.strokeStyle = cB; ctx.lineWidth = 22; ctx.beginPath(); ctx.moveTo(ox, oy); ctx.lineTo(ex, ey); ctx.stroke();
+        ctx.strokeStyle = cA; ctx.lineWidth = 64; ctx.globalAlpha = fade * 0.16; ctx.beginPath(); ctx.moveTo(ox, oy); ctx.lineTo(ex, ey); ctx.stroke(); ctx.globalAlpha = fade;
         ctx.strokeStyle = "#fff"; ctx.lineWidth = 9; ctx.beginPath(); ctx.moveTo(ox, oy); ctx.lineTo(ex, ey); ctx.stroke();
+        if (Math.random() < 0.85) { bolt(ctx, ox, oy, ex, ey, "#fff", fade * 0.5, 9); bolt(ctx, ox, oy, ex, ey, cB, fade * 0.4, 7); }
         flashCircle(ctx, ox, oy, 42 * fade, fade);
         speedLines(ctx, ox, oy, 44, 120, 12, cB, fade * 0.45);
         ctx.restore();
@@ -220,8 +237,10 @@ const TECH = {
         // black core ring + red ring (the signature black flash)
         hardRing(ctx, this.px, this.py, R, (1 - a) * 2 + 10, "#0a0a12", a);
         hardRing(ctx, this.px, this.py, R, (1 - a) * 2 + 4, "#ff2f3f", a);
+        softDisc(ctx, this.px, this.py, 96 * a, "#ff2f3f", a * 0.55);
         flashCircle(ctx, this.px, this.py, 70 * a, a);
         speedLines(ctx, this.px, this.py, 30, 150, 14, "#ff2f3f", a * 0.8);
+        for (let i = 0; i < 5; i++) { const ang = Math.random() * TAU; bolt(ctx, this.px, this.py, this.px + Math.cos(ang) * 130, this.py + Math.sin(ang) * 130, "#ff5a66", a * 0.8, 5); }
       },
     };
   },

@@ -3,11 +3,11 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
-  <meta name="theme-color" content="#0f1218" />
-  <title>Jujutsu Web — Cursed Energy Camera</title>
+  <meta name="theme-color" content="#0a0b10" />
+  <title>Jujutsu Web — Hand-Sign Techniques</title>
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-  <link href="https://fonts.googleapis.com/css2?family=Anton&family=Oswald:wght@500;600;700&family=Rajdhani:wght@500;600;700&display=swap" rel="stylesheet" />
+  <link href="https://fonts.googleapis.com/css2?family=Anton&family=Bebas+Neue&family=Rajdhani:wght@500;600;700&display=swap" rel="stylesheet" />
   <link rel="stylesheet" href="css/style.css" />
 </head>
 <body>
@@ -22,13 +22,8 @@
   <!-- ===================== MENU ===================== -->
   <main id="menu" class="menu hidden">
     <div class="menu-bg"></div>
-    <div class="sakura" aria-hidden="true"><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i></div>
     <header class="menu-head">
-      <div class="logo">
-        <span class="logo-en">JUJUTSU&nbsp;KAISEN</span>
-        <span class="logo-sub">cursed energy camera · fan game</span>
-      </div>
-      <div id="rankBadge" class="rank-badge"><!-- JS --></div>
+      <div class="logo"><span class="logo-en">JUJUTSU&nbsp;WEB</span><span class="logo-sub">hand-sign cursed techniques</span></div>
     </header>
 
     <section class="char-select">
@@ -37,85 +32,76 @@
     </section>
 
     <section class="modes">
-      <button class="mode-btn primary" data-mode="campaign">
-        <span class="mode-en">Story Campaign</span><small>exorcise cursed spirits · climb the grades</small>
+      <button class="mode-btn primary" data-mode="trial">
+        <span class="mode-en">Technique Trial</span><small>memorize the signs · perform them perfectly · one mistake ends the run</small>
       </button>
       <div class="mode-row">
-        <button class="mode-btn" data-mode="ranked"><span class="mode-en">Ranked</span><small>matchmake · cross-play</small></button>
-        <button class="mode-btn" data-mode="versus"><span class="mode-en">Vs Friend</span><small>room code</small></button>
-      </div>
-      <div class="mode-row">
-        <button class="mode-btn" data-mode="solo"><span class="mode-en">Training</span><small>free play &amp; photos</small></button>
-        <button class="mode-btn" id="customizeBtn"><span class="mode-en">Loadout</span><small>equip &amp; upgrade skills</small></button>
+        <button class="mode-btn" data-mode="training"><span class="mode-en">Training</span><small>free practice</small></button>
+        <button class="mode-btn" data-mode="versus"><span class="mode-en">Vs Friend</span><small>cross-play duel</small></button>
       </div>
       <button class="mode-btn ghost" id="howToBtn"><span class="mode-en">How to play</span></button>
     </section>
     <footer class="menu-foot">fan project · made for fun · not affiliated with the official franchise</footer>
   </main>
 
-  <!-- ===================== APP / STAGE ===================== -->
+  <!-- ===================== STAGE ===================== -->
   <div id="stage" class="stage hidden">
     <video id="video" playsinline autoplay muted></video>
     <canvas id="fx"></canvas>
+    <div class="vignette"></div>
 
-    <!-- arena-fighter HUD -->
-    <div class="fight-hud">
-      <div class="fighter p1">
-        <div class="badge"><img id="p1Avatar" class="badge-img" alt="" /><span id="p1Init">Y</span></div>
-        <div class="bars">
-          <div class="nameplate" id="p1Name">Player</div>
-          <div class="hpbar"><span id="p1Hp"></span></div>
-          <div class="special" title="Cursed Energy"><span id="specialFill"></span><em>SPECIAL</em></div>
-          <div class="bursts" id="burstPips" title="Surge — full unlocks your Domain"></div>
-        </div>
-      </div>
-      <div class="fighter p2 hidden" id="p2wrap">
-        <div class="bars right">
-          <div class="nameplate" id="p2Name">Opponent</div>
-          <div class="hpbar rev"><span id="p2Hp"></span></div>
-        </div>
-        <div class="badge"><img id="p2Avatar" class="badge-img" alt="" /><span id="p2Init">?</span></div>
-      </div>
+    <!-- top bar -->
+    <div class="topbar">
+      <div class="stat"><span class="lbl">SCORE</span><b id="score">0</b></div>
+      <div class="mode-name" id="modeName">TRIAL</div>
+      <div class="stat right"><span class="lbl" id="rightLbl">BEST</span><b id="best">0</b></div>
     </div>
 
-    <button id="backBtn" class="icon-btn" title="Back">⟵</button>
-    <div id="fps" class="fps">-- fps</div>
-    <video id="oppVideo" class="opp-pip hidden" playsinline autoplay></video>
+    <!-- versus bars -->
+    <div id="vsBars" class="vs-bars hidden">
+      <div class="vs-side"><span id="p1Name">You</span><div class="hp"><span id="p1Hp"></span></div></div>
+      <video id="oppVideo" class="opp-pip" playsinline autoplay></video>
+      <div class="vs-side right"><span id="p2Name">Rival</span><div class="hp foe"><span id="p2Hp"></span></div></div>
+    </div>
 
-    <div id="combo" class="combo"><b id="comboN">0</b><span>HITS</span></div>
-    <div id="statusTag" class="status-tag"></div>
+    <!-- HERO: technique scroll -->
+    <div id="scroll" class="scroll">
+      <div class="tlabel" id="tLabel">PERFORM</div>
+      <div class="tname" id="techName">—</div>
+      <div class="seq" id="seqRow"></div>
+      <div class="timebar"><span id="timeBar"></span></div>
+    </div>
+
+    <div id="combo" class="combo"></div>
     <div id="banner" class="banner"></div>
+    <div id="techFlash" class="tech-flash"></div>
+    <div id="statusTag" class="status-tag"></div>
     <div id="cutin" class="cutin"><div class="cutin-strip"></div><span class="cutin-init" id="cutinInit">G</span><span class="cutin-name" id="cutinName">SKILL</span></div>
 
-    <div id="hint" class="hint"></div>
-    <button id="qte" class="qte"><div class="qte-ring"><span id="qteSign"></span></div><div class="qte-label">COUNTER!</div></button>
-    <div id="techFlash" class="tech-flash"></div>
+    <!-- detected sign + commit ring -->
+    <div id="signNow" class="sign-now"><b id="signNowGlyph"></b></div>
 
-    <div id="spellbook" class="spellbook"><!-- JS --></div>
+    <!-- sign palette (tap input) -->
+    <div id="palette" class="palette"><!-- JS --></div>
 
-    <div class="hud hud-bottom">
-      <button id="cloakBtn" class="pill" title="Blue cursed-flame cloak">✶</button>
-      <button id="captureBtn" class="capture" title="Capture photo">◉</button>
-      <button id="soundBtn" class="pill" title="Sound">🔊</button>
-      <button id="mirrorBtn" class="pill" title="Mirror">⇄</button>
+    <div class="controls">
+      <button id="backBtn" class="ctl" title="Back">⟵</button>
+      <button id="captureBtn" class="ctl" title="Capture photo">◉</button>
+      <button id="soundBtn" class="ctl" title="Sound">🔊</button>
+      <button id="mirrorBtn" class="ctl" title="Mirror">⇄</button>
     </div>
 
+    <div id="fps" class="fps">-- fps</div>
     <div id="gallery" class="gallery"></div>
-  </div>
 
-  <!-- ===================== LOADOUT / CUSTOMIZE ===================== -->
-  <div id="customize" class="modal hidden">
-    <div class="modal-card wide">
-      <div class="cz-top">
-        <h2>Loadout</h2>
-        <div id="czCoins" class="cz-coins"></div>
+    <!-- game over (trial) -->
+    <div id="gameover" class="modal hidden">
+      <div class="modal-card center">
+        <div class="go-title" id="goTitle">RUN OVER</div>
+        <div class="go-stats"><div><span class="lbl">SCORE</span><b id="goScore">0</b></div><div><span class="lbl">BEST</span><b id="goBest">0</b></div></div>
+        <div class="go-msg" id="goMsg"></div>
+        <div class="go-actions"><button id="retryBtn" class="mode-btn primary"><span class="mode-en">Run again</span></button><button id="goMenuBtn" class="mode-btn"><span class="mode-en">Menu</span></button></div>
       </div>
-      <div id="czTabs" class="cz-tabs"></div>
-      <div class="cz-label">Equipped — tap a slot, then a skill below to equip</div>
-      <div id="czSlots" class="cz-slots"></div>
-      <div class="cz-label">Skill pool — ⬆ upgrade with cursed coins</div>
-      <div id="czPool" class="cz-pool"></div>
-      <button id="czClose" class="mode-btn primary"><span class="mode-en">Done</span></button>
     </div>
   </div>
 
@@ -123,38 +109,13 @@
   <div id="lobby" class="modal hidden">
     <div class="modal-card">
       <h2>Fight a friend</h2>
-      <p class="muted">share a room code · both need a camera · works phone↔laptop</p>
+      <p class="muted">Share a code · both need a camera · works phone↔laptop.</p>
       <div class="lobby-row"><button id="createRoom" class="mode-btn primary"><span class="mode-en">Create room</span></button></div>
       <div class="lobby-or">— or —</div>
-      <div class="lobby-row join">
-        <input id="roomInput" maxlength="8" placeholder="CODE" autocomplete="off" />
-        <button id="joinRoom" class="mode-btn"><span class="mode-en">Join</span></button>
-      </div>
+      <div class="lobby-row join"><input id="roomInput" maxlength="8" placeholder="CODE" autocomplete="off" /><button id="joinRoom" class="mode-btn"><span class="mode-en">Join</span></button></div>
       <div id="lobbyCode" class="lobby-code hidden">code: <b id="codeText">----</b> <button id="copyCode" class="mini">copy</button><div class="muted small">waiting…</div></div>
       <div id="lobbyStatus" class="lobby-status"></div>
       <button id="lobbyClose" class="mini close">✕</button>
-    </div>
-  </div>
-
-  <!-- ===================== RANKED QUEUE ===================== -->
-  <div id="queue" class="modal hidden">
-    <div class="modal-card">
-      <h2>Ranked match</h2>
-      <div id="queueRank" class="queue-rank"></div>
-      <div class="queue-spinner"><span></span><span></span><span></span></div>
-      <div id="queueStatus" class="lobby-status">finding an opponent…</div>
-      <p class="muted small">serverless cross-play — pairs you with anyone queueing now, on any device.</p>
-      <button id="queueClose" class="mini close">✕</button>
-    </div>
-  </div>
-
-  <!-- ===================== STORY ===================== -->
-  <div id="story" class="modal hidden">
-    <div class="modal-card story-card">
-      <div id="storyGlyph" class="story-glyph">👁️</div>
-      <h2 id="storyTitle">Stage</h2>
-      <p id="storyText" class="story-text"></p>
-      <button id="storyGo" class="mode-btn primary"><span class="mode-en">begin</span></button>
     </div>
   </div>
 

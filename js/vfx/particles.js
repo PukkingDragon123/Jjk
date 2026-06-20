@@ -22,7 +22,21 @@ function glowSprite(color) {
   grd.addColorStop(0.25, `rgba(${r},${gr},${b},.9)`);
   grd.addColorStop(1, `rgba(${r},${gr},${b},0)`);
   g.fillStyle = grd; g.fillRect(0, 0, 64, 64);
-  if (_spriteCache.size < 64) _spriteCache.set(color, c);
+  if (_spriteCache.size < 96) _spriteCache.set(color, c);
+  return c;
+}
+const _softCache = new Map();
+function softSprite(color) {
+  let s = _softCache.get(color);
+  if (s) return s;
+  const c = document.createElement("canvas"); c.width = c.height = 72;
+  const g = c.getContext("2d"); const [r, gr, b] = hexToRgb(color);
+  const grd = g.createRadialGradient(36, 36, 0, 36, 36, 36);
+  grd.addColorStop(0, `rgba(${r},${gr},${b},.92)`);
+  grd.addColorStop(0.55, `rgba(${r},${gr},${b},.42)`);
+  grd.addColorStop(1, `rgba(${r},${gr},${b},0)`);
+  g.fillStyle = grd; g.fillRect(0, 0, 72, 72);
+  if (_softCache.size < 64) _softCache.set(color, c);
   return c;
 }
 
@@ -95,8 +109,8 @@ export class ParticleSystem {
       if (o.shape === "smoke") {
         ctx.globalCompositeOperation = "source-over";
         ctx.globalAlpha = o.alpha * (1 - t) * (1 - t);
-        ctx.fillStyle = o.color;
-        ctx.beginPath(); ctx.arc(o.x, o.y, Math.max(1, o.size), 0, TAU); ctx.fill();
+        const sp = softSprite(o.color), d = Math.max(2, o.size) * 3.2;
+        ctx.drawImage(sp, o.x - d / 2, o.y - d / 2, d, d);
         continue;
       }
       ctx.globalCompositeOperation = "lighter";

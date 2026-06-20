@@ -33,6 +33,8 @@ const els = {
 const SIGN_KEYS = ["fist", "open", "one", "two", "double", "pray"];
 
 const ctx = els.fx.getContext("2d");
+const bloomA = document.createElement("canvas"), bloomB = document.createElement("canvas"); // downsample bloom chain
+const bctxA = bloomA.getContext("2d"), bctxB = bloomB.getContext("2d");
 const tracker = new Tracker();
 const gestures = new GestureEngine();
 const particles = new ParticleSystem(1200);
@@ -107,7 +109,12 @@ async function ensureCamera() {
   els.video.srcObject = stream; await els.video.play().catch(() => {});
   return stream;
 }
-function resize() { const dpr = Math.min(2, window.devicePixelRatio || 1); els.fx.width = Math.round(els.fx.clientWidth * dpr); els.fx.height = Math.round(els.fx.clientHeight * dpr); }
+function resize() {
+  const dpr = Math.min(2, window.devicePixelRatio || 1);
+  els.fx.width = Math.round(els.fx.clientWidth * dpr); els.fx.height = Math.round(els.fx.clientHeight * dpr);
+  bloomA.width = Math.max(1, els.fx.width >> 2); bloomA.height = Math.max(1, els.fx.height >> 2);
+  bloomB.width = Math.max(1, els.fx.width >> 3); bloomB.height = Math.max(1, els.fx.height >> 3);
+}
 window.addEventListener("resize", resize);
 
 /* ---------- stage ---------- */
@@ -280,6 +287,19 @@ function loop(now) {
   drawHands(ctx, g.hands);
   particles.render(ctx); effects.render(ctx, W, H);
   ctx.restore();
+
+  // bloom: downsample the scene twice, then add the small buffers back upscaled
+  // (bilinear = soft blur) and additive — a luminous halo over a crisp core.
+  if (bloomA.width > 1) {
+    bctxA.clearRect(0, 0, bloomA.width, bloomA.height); bctxA.drawImage(els.fx, 0, 0, bloomA.width, bloomA.height);
+    bctxB.clearRect(0, 0, bloomB.width, bloomB.height); bctxB.drawImage(bloomA, 0, 0, bloomB.width, bloomB.height);
+    ctx.save();
+    ctx.globalCompositeOperation = "lighter"; ctx.imageSmoothingEnabled = true; ctx.imageSmoothingQuality = "high";
+    ctx.globalAlpha = 0.5; ctx.drawImage(bloomB, 0, 0, W, H);
+    ctx.globalAlpha = 0.35; ctx.drawImage(bloomA, 0, 0, W, H);
+    ctx.globalAlpha = 1;
+    ctx.restore();
+  }
 
   fpsN++; fpsT += dt; if (fpsT >= 0.5) { els.fps.textContent = Math.round(fpsN / fpsT) + " fps"; fpsN = 0; fpsT = 0; }
   requestAnimationFrame(loop);

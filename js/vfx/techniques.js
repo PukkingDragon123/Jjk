@@ -155,8 +155,8 @@ const TECH = {
         ctx.globalAlpha = fade;
         ctx.strokeStyle = cB; ctx.lineWidth = 22; ctx.beginPath(); ctx.moveTo(ox, oy); ctx.lineTo(ex, ey); ctx.stroke();
         ctx.strokeStyle = "#fff"; ctx.lineWidth = 9; ctx.beginPath(); ctx.moveTo(ox, oy); ctx.lineTo(ex, ey); ctx.stroke();
-        flashCircle(ctx, ox, oy, 70 * fade, fade);
-        speedLines(ctx, ox, oy, 50, 130, 12, cB, fade * 0.5);
+        flashCircle(ctx, ox, oy, 42 * fade, fade);
+        speedLines(ctx, ox, oy, 44, 120, 12, cB, fade * 0.45);
         ctx.restore();
       },
     };

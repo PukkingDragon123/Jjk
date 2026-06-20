@@ -57,7 +57,7 @@ const artCache = {};
 /* ---------- boot ---------- */
 async function boot() {
   for (const c of CHARACTERS) { if (!c.art) continue; const img = new Image(); img.onload = () => (artCache[c.id] = img); img.src = c.art; }
-  buildCharGrid(); buildPalette(); buildHelp(); wireUI();
+  buildCharGrid(); buildPalette(); buildHelp(); wireUI(); setupClips();
   let p = 0;
   const tick = setInterval(() => { p = Math.min(0.85, p + 0.05); els.bootBar.style.width = p * 100 + "%"; }, 120);
   const mode = await tracker.init((v, msg) => { p = Math.max(p, v); els.bootBar.style.width = p * 100 + "%"; if (msg) els.bootMsg.textContent = msg; });
@@ -123,6 +123,7 @@ async function enterStage(mode) {
   state.mode = mode; state.over = false; state.lock = 0; state.buf = []; state.combo = 0; state.score = 0; state.selfHp = 100; state.oppHp = 100;
   particles.clear(); effects.fx.length = 0;
   els.stage.style.setProperty("--acc", state.char.accent);
+  probeClips(state.char);
   els.menu.classList.add("hidden"); els.stage.classList.remove("hidden");
   els.gameover.classList.add("hidden");
   els.vsBars.classList.toggle("hidden", mode !== "versus");
@@ -231,14 +232,38 @@ function inputSign(sign) {
 /* ---------- casting / vfx ---------- */
 function castTech(tech, send) {
   const W = els.fx.width, H = els.fx.height, char = state.char;
-  effects.trigger(tech.kind, { x: W / 2, y: H * 0.46, aim: -Math.PI / 2, palette: char.palette, W, H, ...tech });
+  const path = clipPath(char.id, tech.id);
+  if (clipOK[path]) { playClip(path); effects.punchScreen(tech.domain ? 26 : tech.ult ? 18 : 10, char.accent); }
+  else effects.trigger(tech.kind, { x: W / 2, y: H * 0.46, aim: -Math.PI / 2, palette: char.palette, W, H, ...tech });
   audio.play(tech.sfx || "blue");
   flashTech(tech.short, char.accent);
   if (tech.ult || tech.domain) showCutin(tech, char);
   if (tech.domain) showBanner("DOMAIN EXPANSION");
   if (send && versus) versus.send({ type: "attack", char: char.id, tech: serialize(tech) });
 }
-function serialize(t) { return { kind: t.kind, short: t.short, name: t.name, dmg: t.dmg, style: t.style, sub: t.sub, warm: t.warm, water: t.water, barrage: t.barrage, big: t.big }; }
+/* ---------- generated VFX clips (Higgsfield etc.) ---------- */
+const clipPool = [], clipOK = {}, probed = new Set();
+function clipPath(charId, techId) { return `assets/vfx/${charId}_${techId}.webm`; }
+function setupClips() { for (let i = 0; i < 2; i++) { const v = document.createElement("video"); v.className = "vfxclip"; v.muted = true; v.playsInline = true; v.preload = "auto"; els.stage.appendChild(v); clipPool.push(v); } }
+function probeClips(char) {
+  for (const t of char.techniques) {
+    const path = clipPath(char.id, t.id);
+    if (probed.has(path)) continue; probed.add(path);
+    const pv = document.createElement("video"); pv.preload = "metadata"; pv.muted = true;
+    pv.onloadedmetadata = () => { clipOK[path] = true; };
+    pv.onerror = () => { clipOK[path] = false; };
+    pv.src = path;
+  }
+}
+function playClip(path) {
+  const v = clipPool.find((x) => x.paused || x.ended || !x.classList.contains("show")) || clipPool[0];
+  try { v.src = path; v.currentTime = 0; } catch (e) {}
+  v.classList.add("show");
+  const hide = () => { v.classList.remove("show"); v.removeEventListener("ended", hide); };
+  v.addEventListener("ended", hide);
+  v.play().catch(hide);
+}
+function serialize(t) { return { id: t.id, kind: t.kind, short: t.short, name: t.name, dmg: t.dmg, style: t.style, sub: t.sub, warm: t.warm, water: t.water, barrage: t.barrage, big: t.big }; }
 function showCutin(tech, char) {
   els.cutin.style.setProperty("--acc", char.accent);
   els.cutinInit.textContent = char.initial; els.cutinName.textContent = tech.name;
@@ -325,7 +350,9 @@ function drawHands(ctx, hands) {
 /* ---------- versus ---------- */
 function receiveAttack(d) {
   const oc = getCharacter(d.char), m = d.tech, W = els.fx.width, H = els.fx.height;
-  effects.trigger(m.kind, { x: W / 2, y: H * 0.3, aim: Math.PI / 2, palette: oc.palette, W, H, incoming: true, ...m });
+  const path = m.id ? clipPath(d.char, m.id) : null;
+  if (path && clipOK[path]) playClip(path);
+  else effects.trigger(m.kind, { x: W / 2, y: H * 0.3, aim: Math.PI / 2, palette: oc.palette, W, H, incoming: true, ...m });
   audio.play("hit"); effects.punchScreen(14, "#ff2436");
   state.selfHp = Math.max(0, state.selfHp - (m.dmg || 0)); updateVsHp();
   versus?.send({ type: "hp", hp: state.selfHp });
@@ -342,7 +369,7 @@ function newVersus() {
     onStatus: (m) => (els.lobbyStatus.textContent = m),
     onConnected: () => { versus.send({ type: "char", id: state.char.id }); els.lobby.classList.add("hidden"); enterStage("versus"); },
     onData: (d) => {
-      if (d.type === "char") { state.oppChar = d.id; els.p2Name.textContent = getCharacter(d.id).name.split(" ")[0]; }
+      if (d.type === "char") { state.oppChar = d.id; els.p2Name.textContent = getCharacter(d.id).name.split(" ")[0]; probeClips(getCharacter(d.id)); }
       else if (d.type === "attack") receiveAttack(d);
       else if (d.type === "hp") { state.oppHp = d.hp; updateVsHp(); if (d.hp <= 0) endDuel(true); }
     },

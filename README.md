@@ -1,12 +1,10 @@
-# 呪術 · JUJUTSU WEB
+# JUJUTSU WEB — hand-sign cursed techniques
 
-A camera-based, **Jujutsu Kaisen-inspired** web toy. Point your webcam at
-yourself, channel **cursed energy** with your hands, and unleash techniques —
-Gojo's **Hollow Purple**, Sukuna's **Cleave / Malevolent Shrine**, Yuji's
-**Black Flash**, Megumi's **Divine Dogs** — as glowing VFX painted over the live
-camera with **AI hand-tracking**. Snap stylised cursed photos, or **fight other
-people** in real time (room-code or ranked matchmaking), cross-play, in the
-browser.
+A camera-based, **Jujutsu Kaisen-inspired** web game. It's a **hand-sign
+sequence** game in the spirit of weaving jutsu signs: a technique flashes its
+chain of signs, you memorise it, then **perform the signs in order** in front of
+your webcam. Every technique you land paints cinematic **cursed-energy VFX** over
+the live camera with **AI hand-tracking**. One wrong sign ends the run.
 
 > Fan project. Not affiliated with or endorsed by the official franchise. Made for fun.
 
@@ -15,36 +13,34 @@ browser.
 ## ✨ Features
 
 - **Live camera + AI hand tracking** (MediaPipe Hand Landmarker), with a
-  **pointer/tap fallback** so it still works if the camera-AI can't load.
-- **Cursed-energy VFX engine** — additive particle system, beams, slashes,
-  Black Flash, and full-screen **Domain Expansions** (Unlimited Void,
-  Malevolent Shrine, Chimera Shadow Garden).
-- **Gesture techniques** — charge, blast, melee, two-hand specials, and domains
-  triggered by what your hands actually do.
-- **5… er, 4 sorcerers** — Gojo, Sukuna, Yuji, Megumi — each with their own
-  palette, techniques, and domain.
-- **Capture & post** — composite the camera + effects into a framed photo and
+  **tap-the-signs fallback** so it still works if the camera-AI can't load or
+  there's no camera.
+- **Six hand signs** — ✋ open palm · ✊ fist · ☝️ one finger · ✌️ two fingers ·
+  👐 both palms · 🙏 hands clasped. Hold a sign to lock it, relax, form the next.
+- **Cinematic VFX engine** — additive glow particles, anime smoke, slashes,
+  beams, Black Flash, full-screen **Domain Expansions**, a downsample **bloom**
+  pass, plus a graded/letterboxed camera for a MAPPA-style look.
+- **Optional generated clips** — drop `.webm` cursed-energy clips (Higgsfield /
+  Runway / Sora …) into `assets/vfx/` and they play automatically over the
+  procedural effects. See [`assets/vfx/README.md`](assets/vfx/README.md).
+- **4 sorcerers** — Gojo, Sukuna, Yuji, Megumi — each with their own palette and
+  five techniques (basic → ultimate → domain).
+- **Capture & share** — composite the camera + effects into a framed photo and
   share it (native share sheet on mobile, download on desktop).
-- **Versus (room code)** — battle a friend peer-to-peer; you see each other's
-  camera and land techniques for real damage.
-- **Ranked** — auto-matchmaking + sorcerer **grades** (Grade 4 → Special Grade)
-  that you climb by winning. Progress is saved locally.
-- **Cross-play** — it's all in the browser over WebRTC, so phone ↔ laptop ↔
-  tablet across platforms just works.
+- **Cross-play Vs Friend** — duel a friend peer-to-peer over a room code; you see
+  each other's camera and land techniques for real damage. Phone ↔ laptop just
+  works, all in the browser over WebRTC.
 
-## 🎮 How to play
+## 🎮 Modes
 
-| Gesture | Action |
+| Mode | What you do |
 |---|---|
-| ✋ Hold an open palm steady | **Charge** cursed energy |
-| 👉 Thrust an open palm | **Blast** (your character's projectile) |
-| ✊ Fast punch (fist) | **Melee** (e.g. Black Flash) |
-| 🙌 Bring both hands together | **Special** (Hollow Purple, Fire Arrow…) |
-| 🛐 Clasp both hands & hold (energy full) | **Domain Expansion** |
-| 👆 Tap / double-tap / hold the screen | Blast / Special / Charge (always works) |
+| **Technique Trial** | A technique's sign chain flashes, then hides. Recall it and perform it in order. One wrong sign — or running out of time — ends the run. Score and chain combo climb as you go. |
+| **Training** | Free practice. The technique book stays on screen; form any technique's signs to unleash it. |
+| **Vs Friend** | Cross-play duel over a room code. Complete a technique's signs to land it on your rival. |
 
-The **◉** button captures a photo. **領域展開** triggers your Domain when the
-energy bar is full. Toggles: cursed cloak, sound, mirror.
+No camera? **Tap the sign keys** at the bottom of the screen — same sequences,
+works anywhere.
 
 ## ▶️ Running it
 
@@ -57,21 +53,28 @@ python3 -m http.server 8099
 ```
 
 Deploy anywhere that serves static files over **HTTPS** (GitHub Pages, Netlify,
-Vercel, …). For **Versus/Ranked**, both players just need the page open —
-matchmaking and the P2P connection run client-side via
-[PeerJS](https://peerjs.com/).
+Vercel, githack, …). For **Vs Friend**, both players just need the page open —
+the P2P connection runs client-side via [PeerJS](https://peerjs.com/).
 
 ## 🖼️ Adding your own character art
 
-See [`assets/README.md`](assets/README.md). Drop `gojo.png`, `sukuna.png`,
-`yuji.png`, `megumi.png` into `assets/` and refresh — they show up on the
-character stickers, the HUD, and your captured photos. Until then, a stencil
-kanji stands in.
+See [`assets/README.md`](assets/README.md). Drop `gojo.jpg`, `sukuna.jpg`,
+`yuji.jpg`, `megumi.jpg` into `assets/` and refresh — they show up on the
+character stickers, the HUD, and your captured photos. Until then, each
+sorcerer's initial stands in.
+
+## 🎬 Adding generated technique VFX
+
+See [`assets/vfx/README.md`](assets/vfx/README.md) for the full filename list and
+a prompt cheat-sheet. Drop `<characterId>_<techniqueId>.webm` clips in
+`assets/vfx/`; they're screen-blended over the camera and fall back to the
+built-in procedural effects when missing.
 
 ## 🧪 Tests
 
-A headless Playwright smoke test boots the app with a fake camera, exercises
-solo / ranked / versus, and fails on any uncaught error:
+A headless Playwright smoke test boots the app with a fake camera, plays a Trial
+round (correct sequence scores; a wrong sign triggers game-over), opens Training
+and the Vs Friend lobby, and fails on any uncaught error:
 
 ```bash
 python3 -m http.server 8099 &
@@ -80,30 +83,30 @@ node test/smoke.mjs
 
 ## 🛠️ Tech
 
-Vanilla ES modules — **no build step**. MediaPipe Tasks-Vision (hands) and
-PeerJS load lazily from CDN; everything else (particles, audio, capture, ranking)
-is hand-rolled. Sound effects are synthesised with the Web Audio API, so there
-are no audio asset files.
+Vanilla ES modules — **no build step**. MediaPipe Tasks-Vision (hands) and PeerJS
+load lazily from CDN; everything else (particles, audio, capture) is hand-rolled.
+Sound effects are synthesised with the Web Audio API, so there are no audio asset
+files.
 
 ```
 index.html · css/style.css
 js/
-  main.js          orchestration, render loop, HUD
-  characters.js    roster + technique mappings
-  tracking.js      MediaPipe hands (+ pointer fallback)
-  gestures.js      landmarks → technique gestures
+  main.js          orchestration, render loop, HUD, clip pipeline
+  characters.js    roster + technique sign sequences
+  signs.js         the six hand signs
+  tracking.js      MediaPipe hands (+ pointer/tap fallback)
+  gestures.js      landmarks → committed signs (hold-to-lock)
   vfx/particles.js additive glow-sprite particle system
   vfx/techniques.js scripted effects + Domain Expansions
-  multiplayer.js   PeerJS versus + ranked matchmaking
-  rank.js          grades / progression (localStorage)
+  multiplayer.js   PeerJS versus (data + media)
   capture.js       photo compositing + share
   audio.js         synthesised SFX
+assets/            character art + assets/vfx/ generated clips
 ```
 
 ## ⚠️ Notes & limits
 
-- Hand-tracking quality depends on lighting and your device; the tap controls
-  are always available as a fallback.
-- Ranked matchmaking is **serverless** (a shared rendezvous over the public
-  PeerJS broker) — great for casual play, but it's not a hardened ranked
-  backend, and the rating is stored on your own device.
+- Hand-tracking quality depends on lighting and your device; the tap controls are
+  always available as a fallback.
+- Vs Friend uses the public PeerJS broker for signalling — great for casual play,
+  but it's not a hardened backend.

@@ -254,3 +254,46 @@ h2{font-family:var(--cond);letter-spacing:.04em;font-weight:400;font-size:1.9rem
 .ctl:active{transform:scale(.9)}
 .mode-btn::after{content:"";position:absolute;inset:0;border-radius:inherit;background:radial-gradient(120% 140% at 0% 0%,rgba(255,255,255,.06),transparent 50%);opacity:0;transition:opacity .16s;pointer-events:none}
 .mode-btn:hover::after{opacity:1}
+
+/* ===== UX/UI ProMax: ambient depth · glass · smooth motion ===== */
+/* branded thin scrollbars */
+*{scrollbar-width:thin;scrollbar-color:rgba(255,255,255,.16) transparent}
+*::-webkit-scrollbar{width:9px;height:9px}
+*::-webkit-scrollbar-thumb{background:rgba(255,255,255,.14);border-radius:8px;border:2px solid transparent;background-clip:content-box}
+*::-webkit-scrollbar-thumb:hover{background:rgba(255,255,255,.26);background-clip:content-box}
+
+/* living ambient aura behind the menu (slow, soft — never busy) */
+.menu-bg::before,.menu-bg::after{content:"";position:absolute;border-radius:50%;filter:blur(70px);opacity:.30;mix-blend-mode:screen;pointer-events:none}
+.menu-bg::before{width:50vmax;height:50vmax;left:-12vmax;top:-14vmax;background:radial-gradient(circle,#ff2436,transparent 62%);animation:aura1 20s ease-in-out infinite}
+.menu-bg::after{width:44vmax;height:44vmax;right:-14vmax;bottom:-16vmax;background:radial-gradient(circle,#3978ff,transparent 62%);animation:aura2 26s ease-in-out infinite}
+@keyframes aura1{50%{transform:translate(7vmax,5vmax) scale(1.14)}}
+@keyframes aura2{50%{transform:translate(-6vmax,-4vmax) scale(1.1)}}
+
+/* hero logo halo */
+.menu-head{position:relative}
+.menu-head::after{content:"";position:absolute;left:50%;top:38%;width:64%;height:130px;transform:translate(-50%,-50%);
+  background:radial-gradient(closest-side,rgba(255,60,80,.18),transparent);filter:blur(6px);z-index:-1;pointer-events:none}
+
+/* character cards: perspective tilt + parallax art + breathing select glow */
+.char-grid{perspective:1200px}
+.char-card{transition:transform .26s cubic-bezier(.2,.7,.2,1)}
+.char-card:hover{transform:translateY(-6px) rotateX(7deg) scale(1.02)}
+.char-card .art{transition:transform .45s cubic-bezier(.2,.7,.2,1)}
+.char-card:hover .art{transform:scale(1.09)}
+.char-card .sticker{transition:box-shadow .3s cubic-bezier(.2,.7,.2,1)}
+.char-card.sel .sticker{animation:selGlow 2.4s ease-in-out infinite}
+@keyframes selGlow{0%,100%{box-shadow:0 0 0 2px var(--accent),0 16px 44px -18px var(--accent)}
+  50%{box-shadow:0 0 0 2px var(--accent),0 20px 56px -14px var(--accent),0 0 34px -4px var(--accent)}}
+
+/* glass depth on panels, HUD chips, keys */
+.modal-card{backdrop-filter:blur(12px) saturate(1.25);box-shadow:0 30px 80px -30px #000,inset 0 1px 0 rgba(255,255,255,.07)}
+.tile,.pkey,.chip,.ctl,.opp-pip{box-shadow:inset 0 1px 0 rgba(255,255,255,.07),0 8px 22px -12px #000}
+.sign-now{box-shadow:0 8px 30px -8px var(--acc)}
+
+/* primary CTA: soft breathing glow */
+.mode-btn.primary{animation:primGlow 3.4s ease-in-out infinite}
+@keyframes primGlow{50%{box-shadow:0 0 26px -10px rgba(255,90,99,.7)}}
+
+@media (prefers-reduced-motion:reduce){
+  .menu-bg::before,.menu-bg::after,.char-card.sel .sticker,.mode-btn.primary{animation:none}
+}

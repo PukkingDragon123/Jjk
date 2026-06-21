@@ -1,10 +1,26 @@
-# Generated technique VFX clips (Higgsfield / Runway / Sora / Kling …)
+# Technique VFX clips
 
-Drop a short video clip here for any technique and the game plays it **on top of
-the camera** the moment that technique fires. No code change needed — the app
-probes for each file on character select and uses it automatically. If a clip is
-missing, the built-in **procedural VFX falls back in** seamlessly, so you can add
-clips one at a time.
+This folder ships with a full set of **20 pre-generated cursed-energy clips** —
+one per technique. The game plays them **on top of the camera** the moment a
+technique fires (screen-blended, so energy-on-black comps cleanly). The app
+probes for each file on character select and uses it automatically; if a clip is
+missing, the built-in **procedural VFX falls back in** seamlessly.
+
+## How these were made (and how to regenerate / replace them)
+
+The bundled clips are rendered **procedurally** by [`tools/vfxgen.py`](../../tools/vfxgen.py)
+— a numpy renderer (additive particles, filmic tone-map, multi-scale bloom,
+motion blur, chromatic fringing) encoded to VP9 webm. To rebuild them:
+
+```bash
+pip install numpy imageio imageio-ffmpeg
+python3 tools/vfxgen.py all          # writes all 20 into assets/vfx/
+python3 tools/vfxgen.py preview      # dump contact-sheet PNGs to tune by eye
+```
+
+Prefer **AI-generated** clips (Higgsfield / Runway / Sora / Kling …)? Just drop a
+`.webm` with the matching filename here and it overrides the bundled one — no
+code change. Generation guidance is below.
 
 ## How the clips are composited
 

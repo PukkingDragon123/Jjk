@@ -26,10 +26,15 @@ try {
   console.log(`✓ trial started, palette keys: ${(await page.$$(".pkey")).length}`);
   let seq = (await page.$eval("#seqRow", (e) => e.dataset.seq)).split(" ");
   for (const s of seq) { await clickSign(s); await page.waitForTimeout(80); }
+  // sequence only PRIMES the technique — must release (clap/point) to cast
+  await page.waitForSelector("#releaseBtn.show", { timeout: 3000 });
+  const midScore = await page.$eval("#score", (e) => parseInt(e.textContent) || 0);
+  if (midScore !== 0) throw new Error("scored before releasing — release gate not working");
+  await page.click("#releaseBtn");
   await page.waitForTimeout(300);
   const score = await page.$eval("#score", (e) => parseInt(e.textContent) || 0);
-  console.log(`✓ performed [${seq.join(" ")}] → score ${score}`);
-  if (score <= 0) throw new Error("correct sequence did not score");
+  console.log(`✓ wove [${seq.join(" ")}], primed, released → score ${score}`);
+  if (score <= 0) throw new Error("correct sequence + release did not score");
   await page.screenshot({ path: "test/shot-trial.png" });
 
   // wait for next round, then a WRONG sign ends the run
@@ -47,8 +52,11 @@ try {
   await page.waitForSelector("#stage:not(.hidden)");
   await page.waitForSelector(".chip", { timeout: 6000 });
   console.log(`✓ training book: ${(await page.$$(".chip")).length} techniques`);
-  await clickSign("open"); await clickSign("fist"); // Gojo Blue
-  await page.waitForTimeout(400);
+  await clickSign("open"); await clickSign("fist"); // Gojo Blue → primes
+  await page.waitForSelector("#releaseBtn.show", { timeout: 3000 });
+  await page.click("#releaseBtn");                  // point-release to cast
+  await page.waitForTimeout(300);
+  console.log("✓ training: wove + released a technique");
   await page.screenshot({ path: "test/shot-training.png" });
   await page.click("#backBtn");
 

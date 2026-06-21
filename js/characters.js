@@ -5,7 +5,7 @@
 export const CHARACTERS = [
   {
     id: "gojo", name: "Gojo Satoru", initial: "G", title: "Limitless · The Honored One",
-    accent: "#39a8ff", art: "assets/gojo.jpg",
+    grade: "SPECIAL GRADE", accent: "#39a8ff", art: "assets/gojo.jpg",
     palette: { a: "#39a0ff", b: "#b14bff", glow: "#bfe3ff" },
     techniques: [
       { id: "blue", name: "Cursed Technique: Blue", short: "BLUE", seq: ["open", "fist"], kind: "orb", sub: "attract", dmg: 16, sfx: "blue" },
@@ -17,7 +17,7 @@ export const CHARACTERS = [
   },
   {
     id: "sukuna", name: "Ryomen Sukuna", initial: "S", title: "King of Curses",
-    accent: "#ff3b4e", art: "assets/sukuna.jpg",
+    grade: "SPECIAL GRADE", accent: "#ff3b4e", art: "assets/sukuna.jpg",
     palette: { a: "#ff3b4e", b: "#ff8a3b", glow: "#ffd0c0" },
     techniques: [
       { id: "dismantle", name: "Dismantle", short: "DISMANTLE", seq: ["one", "two"], kind: "slash", dmg: 16, sfx: "slash" },
@@ -29,7 +29,7 @@ export const CHARACTERS = [
   },
   {
     id: "yuji", name: "Yuji Itadori", initial: "Y", title: "Sukuna's Vessel",
-    accent: "#ff6a6a", art: "assets/yuji.jpg",
+    grade: "GRADE 1", accent: "#ff6a6a", art: "assets/yuji.jpg",
     palette: { a: "#ff6a6a", b: "#3a1414", glow: "#ffd0d0" },
     techniques: [
       { id: "jab", name: "Cursed Jab", short: "JAB", seq: ["fist", "open"], kind: "burst", dmg: 15, sfx: "punch" },
@@ -41,7 +41,7 @@ export const CHARACTERS = [
   },
   {
     id: "megumi", name: "Megumi Fushiguro", initial: "M", title: "Ten Shadows Technique",
-    accent: "#7c8bff", art: "assets/megumi.jpg",
+    grade: "GRADE 2", accent: "#7c8bff", art: "assets/megumi.jpg",
     palette: { a: "#7c8bff", b: "#222a5c", glow: "#cfd6ff" },
     techniques: [
       { id: "dogs", name: "Divine Dogs", short: "DIVINE DOGS", seq: ["one", "fist"], kind: "beast", dmg: 16, sfx: "beast" },

@@ -22,6 +22,7 @@ const els = {
   combo: $("#combo"), banner: $("#banner"), techFlash: $("#techFlash"), statusTag: $("#statusTag"),
   cutin: $("#cutin"), cutinInit: $("#cutinInit"), cutinName: $("#cutinName"),
   signNow: $("#signNow"), signNowGlyph: $("#signNowGlyph"), palette: $("#palette"),
+  castPrompt: $("#castPrompt"), releaseBtn: $("#releaseBtn"),
   backBtn: $("#backBtn"), captureBtn: $("#captureBtn"), soundBtn: $("#soundBtn"), mirrorBtn: $("#mirrorBtn"),
   fps: $("#fps"), gallery: $("#gallery"),
   gameover: $("#gameover"), goTitle: $("#goTitle"), goScore: $("#goScore"), goBest: $("#goBest"), goMsg: $("#goMsg"),
@@ -45,6 +46,8 @@ const state = {
   // trial
   score: 0, best: +(localStorage.getItem("jjkw_best") || 0), combo: 0, round: 0,
   target: null, idx: 0, roundTime: 7, timeLeft: 7, studyLeft: 0, hideSigns: false, over: false, lock: 0, pendingNext: false,
+  // prime / release
+  primed: null, release: null,
   // free (training/versus)
   buf: [], maxLen: 4,
   // versus
@@ -73,22 +76,31 @@ function buildCharGrid() {
     const card = document.createElement("button");
     card.className = "char-card" + (i === 0 ? " sel" : "");
     card.style.setProperty("--acc", c.accent);
+    const sig = (c.techniques.find((t) => t.domain) || c.techniques.find((t) => t.ult) || c.techniques[0]).name;
     card.innerHTML = `<div class="sticker"><div class="art-wrap"><div class="glyph">${c.initial}</div>
-      <img class="art" alt="${c.name}" src="${c.art}" /></div>
-      <div class="label"><span class="cname">${c.name}</span><span class="ctitle">${c.title}</span></div></div>`;
+      <img class="art" alt="${c.name}" src="${c.art}" /><span class="grade">${c.grade || ""}</span></div>
+      <div class="label"><span class="cname">${c.name.split(" ")[0]}</span><span class="ctitle">${c.title}</span>
+      <span class="cmeta"><i>${c.techniques.length} techniques</i><i class="dot">·</i><i>${sig}</i></span></div></div>`;
     const img = card.querySelector(".art"); img.addEventListener("error", () => (img.style.display = "none"));
-    card.onclick = () => { state.char = c; audio.play("ui"); [...els.charGrid.children].forEach((n) => n.classList.remove("sel")); card.classList.add("sel"); };
+    card.onclick = () => { selectChar(c, card); };
     els.charGrid.appendChild(card);
   });
+  els.menu.style.setProperty("--acc", CHARACTERS[0].accent);
+}
+function selectChar(c, card) {
+  state.char = c; audio.play("ui");
+  [...els.charGrid.children].forEach((n) => n.classList.remove("sel")); card.classList.add("sel");
+  els.menu.style.setProperty("--acc", c.accent);   // flood the menu with this sorcerer's cursed energy
 }
 function buildHelp() {
   const rows = [
     ["🤚", "Form hand signs", "Hold a sign in front of the camera to lock it in, then relax and form the next — like weaving jutsu signs."],
     ["✋✊☝️✌️", "The signs", "Open palm · fist · one finger · two fingers. Two-hand: 👐 both palms, 🙏 hands clasped."],
-    ["🧠", "Technique Trial", "A technique's sign chain flashes, then hides. Recall it and perform it in order. One wrong sign ends the run."],
-    ["🥷", "Training", "Free practice — form any technique's signs from the list to unleash it."],
-    ["⚔️", "Vs Friend", "Cross-play duel: complete a technique's signs to land it on your rival."],
-    ["👆", "No camera?", "Tap the sign keys at the bottom — same sequences, works anywhere."],
+    ["👏👆", "Release the curse", "Weaving primes a technique — then activate it: clap your hands for two-hand finishers and domains, or point one finger to fire projectiles. No release, no cast."],
+    ["🧠", "Technique Trial", "A technique's sign chain flashes, then hides. Recall it, perform it in order, and release it in time. One wrong move ends the run."],
+    ["🥷", "Training", "Free practice — weave any technique's signs, then clap or point to unleash it."],
+    ["⚔️", "Vs Friend", "Cross-play duel: weave a technique and release it to land it on your rival."],
+    ["👆", "No camera?", "Tap the sign keys at the bottom, then tap the glowing release button — same flow, works anywhere."],
   ];
   els.helpBody.innerHTML = rows.map(([g, t, d]) => `<div class="help-row"><div class="g">${g}</div><div><b>${t}</b><p>${d}</p></div></div>`).join("");
 }
@@ -121,7 +133,7 @@ window.addEventListener("resize", resize);
 async function enterStage(mode) {
   try { await ensureCamera(); } catch (e) { return toast("Camera permission needed 📷"); }
   state.mode = mode; state.over = false; state.lock = 0; state.buf = []; state.combo = 0; state.score = 0; state.selfHp = 100; state.oppHp = 100;
-  particles.clear(); effects.fx.length = 0;
+  particles.clear(); effects.fx.length = 0; clearPrimed();
   els.stage.style.setProperty("--acc", state.char.accent);
   probeClips(state.char);
   els.menu.classList.add("hidden"); els.stage.classList.remove("hidden");
@@ -142,6 +154,7 @@ function leaveStage() { state.mode = "menu"; if (versus) { versus.close(); versu
 
 /* ---------- trial ---------- */
 function nextRound() {
+  clearPrimed();
   const techs = state.char.techniques;
   state.target = techs[(Math.random() * techs.length) | 0];
   state.idx = 0; state.round++;
@@ -167,7 +180,7 @@ function trialInput(sign) {
   if (state.over || state.lock > 0) return;
   if (sign === state.target.seq[state.idx]) {
     state.idx++; audio.play("ui"); renderTrialSeq();
-    if (state.idx >= state.target.seq.length) trialSuccess();
+    if (state.idx >= state.target.seq.length) prime(state.target);   // now clap / point to release
   } else { trialFail("WRONG SIGN"); }
 }
 function trialSuccess() {
@@ -182,7 +195,7 @@ function trialSuccess() {
 }
 function trialFail(reason) {
   if (state.over) return;
-  state.over = true; audio.play("hit"); effects.punchScreen(16, "#ff2436");
+  state.over = true; clearPrimed(); audio.play("hit"); effects.punchScreen(16, "#ff2436");
   const tiles = els.seqRow.children; if (tiles[state.idx]) tiles[state.idx].classList.add("bad");
   showStatus("MISS", "bad");
   setTimeout(() => {
@@ -209,8 +222,7 @@ function freeInput(sign) {
     const n = t.seq.length;
     if (state.buf.length >= n && t.seq.every((s, i) => state.buf[state.buf.length - n + i] === s)) {
       state.buf = []; if (buf) buf.textContent = "";
-      const chip = els.seqRow.querySelector(`.chip[data-id="${t.id}"]`); if (chip) { chip.classList.add("lit"); setTimeout(() => chip.classList.remove("lit"), 500); }
-      castTech(t, state.mode === "versus");
+      prime(t);                              // weaving done — clap / point to release
       break;
     }
   }
@@ -218,6 +230,7 @@ function freeInput(sign) {
 
 /* ---------- unified input ---------- */
 function inputSign(sign) {
+  if (state.primed) return;                 // sequence done — waiting on a release gesture
   // light the palette key
   const key = els.palette.querySelector(`.pkey[data-sign="${sign}"]`); if (key) { key.classList.add("lit"); setTimeout(() => key.classList.remove("lit"), 200); }
   // juice: a quick energy pop where the hand is (or centre)
@@ -227,6 +240,47 @@ function inputSign(sign) {
   effects.punchScreen(4);
   if (state.mode === "trial") trialInput(sign);
   else freeInput(sign);
+}
+
+/* ---------- prime → release (clap / point to activate) ---------- */
+function releaseOf(tech) { const last = tech.seq[tech.seq.length - 1]; return (last === "double" || last === "pray" || tech.domain) ? "clap" : "point"; }
+function prime(tech) {
+  state.primed = tech; state.release = releaseOf(tech);
+  const px = state.aimPos ? state.aimPos.x : els.fx.width / 2, py = state.aimPos ? state.aimPos.y : els.fx.height * 0.46;
+  particles.implode(px, py, state.char.palette.glow, 1.3, 28, 190);   // energy gathers, ready to fire
+  particles.aura(px, py, state.char.palette.a, 1.2, 8);
+  effects.punchScreen(5, state.char.accent);
+  audio.play("ui");
+  const clap = state.release === "clap";
+  els.castPrompt.dataset.type = state.release;
+  els.castPrompt.querySelector(".cp-ico").textContent = clap ? "👏" : "👆";
+  els.castPrompt.querySelector(".cp-act").textContent = clap ? "CLAP" : "POINT";
+  els.castPrompt.querySelector(".cp-name").textContent = tech.name;
+  els.castPrompt.classList.add("show");
+  els.releaseBtn.textContent = clap ? "👏" : "👆";
+  els.releaseBtn.classList.add("show");
+  els.palette.classList.add("dim");
+}
+function clearPrimed() {
+  state.primed = null; state.release = null;
+  els.castPrompt.classList.remove("show"); els.releaseBtn.classList.remove("show"); els.palette.classList.remove("dim");
+}
+function tryRelease(type) {
+  if (!state.primed || state.over) return;
+  const want = state.release, tech = state.primed;
+  if (type !== want) {                       // wrong activation — no cast
+    audio.play("hit"); effects.punchScreen(8, "#ff2436"); showStatus("WRONG!", "bad");
+    clearPrimed();
+    if (state.mode === "trial") trialFail(want === "clap" ? "NEEDED A CLAP" : "NEEDED A POINT");
+    return;
+  }
+  clearPrimed();
+  if (state.mode === "trial") { trialSuccess(); }
+  else {
+    const chip = els.seqRow.querySelector(`.chip[data-id="${tech.id}"]`);
+    if (chip) { chip.classList.add("lit"); setTimeout(() => chip.classList.remove("lit"), 500); }
+    castTech(tech, state.mode === "versus");
+  }
 }
 
 /* ---------- casting / vfx ---------- */
@@ -290,6 +344,7 @@ function loop(now) {
   if (tracker.mode === "hands" && els.video.readyState >= 2) g = gestures.process(tracker.detect(els.video, now), makeMap(), now);
   if (g.pos) state.aimPos = g.pos;
   if (g.commit) inputSign(g.commit);
+  if (state.primed) { if (g.clap) tryRelease("clap"); else if (g.point) tryRelease("point"); }
 
   // detected sign indicator
   if (g.sign) { els.signNow.classList.add("show"); els.signNow.style.setProperty("--p", g.progress); els.signNowGlyph.textContent = signOf(g.sign).emoji; }
@@ -389,7 +444,7 @@ async function capture() {
   const r = await postShot(url); if (r === "downloaded") toast("Saved ⬇"); else if (r === "shared") toast("Shared ⚡");
 }
 let toastEl; function toast(msg) {
-  if (!toastEl) { toastEl = document.createElement("div"); toastEl.style.cssText = "position:fixed;left:50%;bottom:130px;transform:translateX(-50%);z-index:60;background:rgba(8,9,14,.9);border:1px solid rgba(255,255,255,.16);padding:8px 16px;border-radius:8px;font-weight:600;transition:.3s;opacity:0"; document.body.appendChild(toastEl); }
+  if (!toastEl) { toastEl = document.createElement("div"); toastEl.style.cssText = "position:fixed;left:50%;bottom:210px;transform:translateX(-50%);z-index:60;background:rgba(8,9,14,.9);border:1px solid rgba(255,255,255,.16);padding:8px 16px;border-radius:8px;font-weight:600;transition:.3s;opacity:0;pointer-events:none"; document.body.appendChild(toastEl); }
   toastEl.textContent = msg; toastEl.style.opacity = "1"; clearTimeout(toastEl._t); toastEl._t = setTimeout(() => (toastEl.style.opacity = "0"), 2000);
 }
 
@@ -406,6 +461,7 @@ function wireUI() {
   els.howToBtn.onclick = () => els.help.classList.remove("hidden");
   els.helpClose.onclick = () => els.help.classList.add("hidden");
   els.backBtn.onclick = leaveStage;
+  els.releaseBtn.onclick = () => { if (state.primed) tryRelease(state.release); };
   els.captureBtn.onclick = capture;
   els.mirrorBtn.onclick = () => { state.mirror = !state.mirror; };
   els.soundBtn.onclick = () => { audio.setMuted(!audio.muted); els.soundBtn.textContent = audio.muted ? "🔇" : "🔊"; };

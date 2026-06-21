@@ -31,7 +31,7 @@ const COMMIT_HOLD = 0.32; // hold a sign this long to lock it in
 const SMOOTH = 0.45;
 
 export class GestureEngine {
-  constructor() { this.holdSign = null; this.holdT = 0; this.committed = false; this.nullT = 0; this.smooth = []; this.window = []; this.lastNow = 0; }
+  constructor() { this.holdSign = null; this.holdT = 0; this.committed = false; this.nullT = 0; this.smooth = []; this.window = []; this.lastNow = 0; this.prevD = 99; this.clapLatch = false; this.pointT = 0; this.pointLatch = false; }
 
   _smooth(rawHands) {
     if (rawHands.length !== this.smooth.length) this.smooth = rawHands.map((h) => h.points.map((p) => ({ ...p })));
@@ -45,11 +45,24 @@ export class GestureEngine {
   process(result, map, now) {
     const dt = Math.min(0.05, Math.max(0.001, (now - this.lastNow) / 1000));
     this.lastNow = now;
-    const out = { hands: [], sign: null, progress: 0, commit: null, pos: null };
+    const out = { hands: [], sign: null, progress: 0, commit: null, pos: null, clap: false, point: false };
     const raw = result.hands || [];
-    if (!raw.length) { this.holdSign = null; this.holdT = 0; this.committed = false; this.window = []; this.smooth = []; return out; }
+    if (!raw.length) { this.holdSign = null; this.holdT = 0; this.committed = false; this.window = []; this.smooth = []; this.prevD = 99; this.clapLatch = false; this.pointT = 0; this.pointLatch = false; return out; }
     const hands = this._smooth(raw).map((h) => features(h.points, map));
     out.hands = hands; out.pos = hands[0].center;
+
+    // CLAP — two hands rushing together (release gesture for two-hand / domain skills)
+    if (hands.length >= 2) {
+      const [a, b] = hands; const d = dist(a.center, b.center) / ((a.palmW + b.palmW) / 2);
+      if (!this.clapLatch && this.prevD > 2.3 && d < 1.25) { out.clap = true; this.clapLatch = true; }
+      if (d > 2.6) this.clapLatch = false;
+      this.prevD = d;
+    } else { this.prevD = 99; this.clapLatch = false; }
+
+    // POINT — one index finger held out and thrust (release gesture for projectiles)
+    const h0 = hands[0], pointing = h0 && h0.ext[1] && !h0.ext[2] && !h0.ext[3] && !h0.ext[4];
+    if (pointing) { this.pointT += dt; if (!this.pointLatch && this.pointT >= 0.20) { out.point = true; this.pointLatch = true; } }
+    else { this.pointT = 0; this.pointLatch = false; }
 
     // two-hand signs take priority
     let raws = null;

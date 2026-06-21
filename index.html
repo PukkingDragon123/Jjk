@@ -23,17 +23,25 @@
   <main id="menu" class="menu hidden">
     <div class="menu-bg"></div>
     <header class="menu-head">
-      <div class="logo"><span class="logo-en">JUJUTSU&nbsp;WEB</span><span class="logo-sub">hand-sign cursed techniques</span></div>
+      <div class="kicker"><span class="kdot"></span>Cursed Technique Simulator</div>
+      <h1 class="logo">
+        <span class="logo-ghost" aria-hidden="true">JUJUTSU</span>
+        <span class="logo-en">JUJUTSU</span>
+        <span class="logo-web">WEB</span>
+      </h1>
+      <p class="logo-sub">Weave the signs — then clap to unleash the curse.</p>
     </header>
 
     <section class="char-select">
-      <h2 class="section-title">Pick your sorcerer</h2>
+      <h2 class="section-title"><span class="num">01</span>Choose your sorcerer</h2>
       <div id="charGrid" class="char-grid"><!-- JS --></div>
     </section>
 
     <section class="modes">
+      <h2 class="section-title"><span class="num">02</span>Pick a mode</h2>
       <button class="mode-btn primary" data-mode="trial">
         <span class="mode-en">Technique Trial</span><small>memorize the signs · perform them perfectly · one mistake ends the run</small>
+        <span class="mode-go" aria-hidden="true">▶</span>
       </button>
       <div class="mode-row">
         <button class="mode-btn" data-mode="training"><span class="mode-en">Training</span><small>free practice</small></button>
@@ -84,8 +92,16 @@
     <!-- detected sign + commit ring -->
     <div id="signNow" class="sign-now"><b id="signNowGlyph"></b></div>
 
+    <!-- release prompt: clap / point to activate the primed technique -->
+    <div id="castPrompt" class="cast-prompt">
+      <span class="cp-ico">👏</span>
+      <span class="cp-act">CLAP</span><span class="cp-lbl">to release</span>
+      <span class="cp-name">—</span>
+    </div>
+
     <!-- sign palette (tap input) -->
     <div id="palette" class="palette"><!-- JS --></div>
+    <button id="releaseBtn" class="release-btn" title="Release">👏</button>
 
     <div class="controls">
       <button id="backBtn" class="ctl" title="Back">⟵</button>

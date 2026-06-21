@@ -20,9 +20,28 @@ Tips:
   character-select stickers, the in-game HUD badge, and stamped on your
   captured photos.
 
+## Optional cinematic menu background
+
+Drop a wide image at **`assets/menu-bg.jpg`** and it appears behind the main menu
+(darkened automatically for legibility). No file → the menu keeps its animated
+gradient aura. A 16:9 cursed-energy key-visual (no characters / text) looks best.
+
 ## Animated technique VFX
 
 Want generated cursed-energy clips (Higgsfield / Runway / Sora …) instead of the
 built-in procedural effects? See [`vfx/README.md`](vfx/README.md) — drop
 `<characterId>_<techniqueId>.webm` clips in `assets/vfx/` and they play
 automatically, with the procedural VFX as a fallback.
+
+## Using Higgsfield-generated assets in web sessions
+
+Higgsfield stores results on a CDN (`*.cloudfront.net`). If you're running
+Claude Code on the web, the sandbox can only download them when that host is in
+your environment's **network egress allowlist**
+([docs](https://code.claude.com/docs/en/claude-code-on-the-web)). Two ways to get
+a generated asset into the repo:
+
+1. **Allowlist the CDN** (`*.cloudfront.net`) in the environment's network
+   settings, then I can fetch + optimise + wire it in automatically.
+2. **Download it yourself** from the Higgsfield widget and save it here with the
+   expected name (e.g. `menu-bg.jpg`, or a `vfx/<char>_<tech>.webm`).

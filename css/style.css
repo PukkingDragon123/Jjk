@@ -32,10 +32,16 @@ h2{font-family:var(--cond);letter-spacing:.04em;font-weight:400;font-size:1.9rem
 
 /* ============ MENU ============ */
 .menu{position:fixed;inset:0;overflow-y:auto;padding:max(28px,6vh) 20px 40px;z-index:20}
-.menu-bg{position:fixed;inset:0;z-index:-1;background:
-  radial-gradient(90% 60% at 50% -10%, rgba(255,36,54,.14), transparent 60%),
-  radial-gradient(70% 50% at 50% 120%, rgba(57,168,255,.10), transparent 60%),
-  var(--ground)}
+/* Optional cinematic key-art lives at assets/menu-bg.jpg — drop one in and it
+   appears behind the menu (darkened for legibility). Absent → gradients only. */
+.menu-bg{position:fixed;inset:0;z-index:-1;background-color:var(--ground);
+  background-image:
+    radial-gradient(90% 60% at 50% -10%, rgba(255,36,54,.16), transparent 60%),
+    radial-gradient(70% 50% at 50% 120%, rgba(57,168,255,.12), transparent 60%),
+    linear-gradient(180deg, rgba(8,9,14,.74), rgba(8,9,14,.9)),
+    url("../assets/menu-bg.jpg");
+  background-size:auto,auto,auto,cover;background-position:center;
+  background-repeat:no-repeat;background-attachment:fixed}
 .menu-head{text-align:center;margin-bottom:30px}
 .logo{display:inline-flex;flex-direction:column;align-items:center}
 .logo-en{font-family:var(--disp);font-size:clamp(2.4rem,8vw,4rem);line-height:.9;letter-spacing:.01em;

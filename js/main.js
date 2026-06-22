@@ -81,7 +81,7 @@ function buildCharGrid() {
       <img class="art" alt="${c.name}" src="${c.art}" /><span class="grade">${c.grade || ""}</span></div>
       <div class="label"><span class="cname">${c.name.split(" ")[0]}</span><span class="ctitle">${c.title}</span>
       <span class="cmeta"><i>${c.techniques.length} techniques</i><i class="dot">·</i><i>${sig}</i></span></div></div>`;
-    const img = card.querySelector(".art"); img.addEventListener("error", () => (img.style.display = "none"));
+    const img = card.querySelector(".art"); img.addEventListener("error", () => { img.style.display = "none"; card.classList.add("no-art"); });
     card.onclick = () => { selectChar(c, card); };
     els.charGrid.appendChild(card);
   });
@@ -402,20 +402,20 @@ function drawHands(ctx, hands) {
   const pal = state.char.palette;
   ctx.save(); ctx.globalCompositeOperation = "lighter"; ctx.lineCap = "round"; ctx.lineJoin = "round";
   for (const h of hands) {
-    const px = h.px, lw = Math.max(2, h.palmW * 0.1);
+    const px = h.px, lw = Math.max(1, h.palmW * 0.04);
     // faint palm aura (the flame carries the rest)
-    const r = h.palmW * 1.2, grd = ctx.createRadialGradient(h.center.x, h.center.y, 0, h.center.x, h.center.y, r);
-    grd.addColorStop(0, pal.glow + "55"); grd.addColorStop(1, "transparent");
+    const r = h.palmW * 0.7, grd = ctx.createRadialGradient(h.center.x, h.center.y, 0, h.center.x, h.center.y, r);
+    grd.addColorStop(0, pal.glow + "33"); grd.addColorStop(1, "transparent");
     ctx.fillStyle = grd; ctx.beginPath(); ctx.arc(h.center.x, h.center.y, r, 0, TAU); ctx.fill();
-    // skeleton bones — energy glow pass, then a bright core
-    ctx.globalAlpha = 0.45; ctx.strokeStyle = pal.a; ctx.lineWidth = lw * 2.2;
+    // skeleton bones — thin energy glow pass, then a crisp bright core
+    ctx.globalAlpha = 0.4; ctx.strokeStyle = pal.a; ctx.lineWidth = lw * 1.7;
     ctx.beginPath(); for (const [a, b] of HAND_BONES) { ctx.moveTo(px[a].x, px[a].y); ctx.lineTo(px[b].x, px[b].y); } ctx.stroke();
-    ctx.globalAlpha = 0.92; ctx.strokeStyle = "#fff"; ctx.lineWidth = Math.max(1, lw * 0.55);
+    ctx.globalAlpha = 0.9; ctx.strokeStyle = "#fff"; ctx.lineWidth = Math.max(0.7, lw * 0.5);
     ctx.beginPath(); for (const [a, b] of HAND_BONES) { ctx.moveTo(px[a].x, px[a].y); ctx.lineTo(px[b].x, px[b].y); } ctx.stroke();
-    // joints — glow + white core (fingertips a touch larger)
+    // joints — small glow + white pip (fingertips a touch larger)
     for (let i = 0; i < 21; i++) {
-      const jr = (TIPS.includes(i) ? lw * 0.95 : lw * 0.6);
-      ctx.globalAlpha = 0.55; ctx.fillStyle = pal.glow; ctx.beginPath(); ctx.arc(px[i].x, px[i].y, jr * 1.9, 0, TAU); ctx.fill();
+      const jr = (TIPS.includes(i) ? lw * 0.85 : lw * 0.5);
+      ctx.globalAlpha = 0.5; ctx.fillStyle = pal.glow; ctx.beginPath(); ctx.arc(px[i].x, px[i].y, jr * 1.5, 0, TAU); ctx.fill();
       ctx.globalAlpha = 1; ctx.fillStyle = "#fff"; ctx.beginPath(); ctx.arc(px[i].x, px[i].y, jr, 0, TAU); ctx.fill();
     }
   }

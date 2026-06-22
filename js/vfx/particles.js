@@ -91,8 +91,8 @@ export class ParticleSystem {
   handFlame(x, y, col, hot, n = 1) {
     for (let i = 0; i < n; i++) {
       const isHot = Math.random() < 0.45;
-      this.spawn({ x: x + rand(-6, 6), y: y + rand(-5, 4), vx: rand(-0.6, 0.6), vy: rand(-3.9, -2.0),
-        life: rand(0.26, 0.54), size: rand(3, 7), grow: rand(-0.18, -0.05), color: isHot ? hot : col, glow: 1.35, shape: "dot", drag: 0.9, grav: -0.07 });
+      this.spawn({ x: x + rand(-4, 4), y: y + rand(-4, 3), vx: rand(-0.5, 0.5), vy: rand(-3.2, -1.7),
+        life: rand(0.24, 0.48), size: rand(2, 4.5), grow: rand(-0.12, -0.03), color: isHot ? hot : col, glow: 1.3, shape: "dot", drag: 0.9, grav: -0.06 });
     }
   }
   shards(x, y, color, glow, n = 14, power = 10) {

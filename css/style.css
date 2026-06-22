@@ -67,7 +67,8 @@ h2{font-family:var(--cond);letter-spacing:.04em;font-weight:400;font-size:1.9rem
 .char-card .sticker{position:relative;border:1px solid var(--line);border-radius:16px;overflow:hidden;background:var(--panel);transition:box-shadow .3s,border-color .3s}
 .char-card .art-wrap{position:relative;height:228px;display:grid;place-items:center;overflow:hidden;background:#0d0f17}
 .char-card .art{width:100%;height:100%;object-fit:cover;object-position:center top}
-.char-card .glyph{position:absolute;font-family:var(--disp);font-size:6rem;color:var(--accent);opacity:.85}
+.char-card .glyph{position:absolute;z-index:0;font-family:var(--disp);font-size:6rem;color:var(--accent);opacity:0}
+.char-card.no-art .glyph{opacity:.85}
 .char-card .art-wrap::after{content:"";position:absolute;inset:0;background:linear-gradient(180deg,transparent 32%,rgba(7,8,13,.45) 62%,rgba(7,8,13,.97))}
 .char-card .art-wrap::before{content:"";position:absolute;inset:0;z-index:1;opacity:0;transition:opacity .35s;mix-blend-mode:soft-light;
   background:linear-gradient(180deg,transparent 38%,color-mix(in srgb,var(--accent) 60%,transparent))}
@@ -360,6 +361,25 @@ h2{font-family:var(--cond);letter-spacing:.04em;font-weight:400;font-size:1.9rem
 .char-card .cname{position:relative}
 .char-card.sel .cname::after{content:"";position:absolute;left:0;bottom:-4px;height:2px;width:40px;background:var(--accent);border-radius:2px}
 @media (prefers-reduced-motion:reduce){.char-card.sel .art-wrap::after{animation:none}}
+
+/* ===== character select — refined motion ===== */
+@keyframes cardIn{from{opacity:0;transform:translateY(26px) scale(.93)}to{opacity:1;transform:none}}
+.char-card{animation:none}                       /* cancel the old pop-in */
+.char-card .sticker{animation:cardIn .6s cubic-bezier(.2,.85,.25,1) backwards}
+.char-card:nth-child(2) .sticker{animation-delay:.07s}
+.char-card:nth-child(3) .sticker{animation-delay:.14s}
+.char-card:nth-child(4) .sticker{animation-delay:.21s}
+.char-card.sel .sticker{animation:cardIn .6s cubic-bezier(.2,.85,.25,1) backwards,selGlow 2.4s ease-in-out infinite}
+/* clean lift + scale (no 3D tilt), and a clear selected size */
+.char-card{transition:transform .26s cubic-bezier(.2,.85,.25,1),opacity .26s,filter .26s}
+.char-card:hover{transform:translateY(-7px) scale(1.03)}
+.char-card.sel{transform:scale(1.035)}
+.char-card.sel:hover{transform:translateY(-7px) scale(1.055)}
+.char-card .art{transition:transform .5s cubic-bezier(.2,.85,.25,1)}
+.char-card:hover .art,.char-card.sel .art{transform:scale(1.07)}
+/* focus: once a sorcerer is chosen, the rest recede */
+.char-grid:has(.sel) .char-card:not(.sel){opacity:.6;filter:saturate(.8)}
+.char-grid:has(.sel) .char-card:not(.sel):hover{opacity:1;filter:none}
 
 @media (prefers-reduced-motion:reduce){
   .cast-prompt .cp-ico,.release-btn.show{animation:none}

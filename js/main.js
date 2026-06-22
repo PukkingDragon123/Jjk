@@ -360,7 +360,7 @@ function loop(now) {
     }
   }
 
-  for (const h of g.hands) particles.aura(h.center.x, h.center.y, state.char.palette.glow, 1, 1);
+  for (const h of g.hands) emitHandFlame(h);
   particles.update(dt); effects.update(dt);
 
   const sh = effects.shake, ox = sh ? (Math.random() * 2 - 1) * sh : 0, oy = sh ? (Math.random() * 2 - 1) * sh : 0;
@@ -389,17 +389,37 @@ function loop(now) {
   fpsN++; fpsT += dt; if (fpsT >= 0.5) { els.fps.textContent = Math.round(fpsN / fpsT) + " fps"; fpsN = 0; fpsT = 0; }
   requestAnimationFrame(loop);
 }
+// MediaPipe hand skeleton (bones between the 21 landmarks)
+const HAND_BONES = [[0,1],[1,2],[2,3],[3,4],[0,5],[5,6],[6,7],[7,8],[5,9],[9,10],[10,11],[11,12],[9,13],[13,14],[14,15],[15,16],[13,17],[17,18],[18,19],[19,20],[0,17]];
+const TIPS = [4, 8, 12, 16, 20];
+function emitHandFlame(h) {
+  const pal = state.char.palette;
+  for (const tip of TIPS) particles.handFlame(h.px[tip].x, h.px[tip].y, pal.a, pal.glow, 1);
+  particles.handFlame(h.center.x, h.center.y, pal.a, pal.glow, 2);
+}
 function drawHands(ctx, hands) {
   if (!hands.length) return;
-  ctx.save(); ctx.globalCompositeOperation = "lighter";
+  const pal = state.char.palette;
+  ctx.save(); ctx.globalCompositeOperation = "lighter"; ctx.lineCap = "round"; ctx.lineJoin = "round";
   for (const h of hands) {
-    const r = h.palmW * 1.5, grd = ctx.createRadialGradient(h.center.x, h.center.y, 0, h.center.x, h.center.y, r);
-    grd.addColorStop(0, state.char.palette.glow + "aa"); grd.addColorStop(1, "transparent");
+    const px = h.px, lw = Math.max(2, h.palmW * 0.1);
+    // faint palm aura (the flame carries the rest)
+    const r = h.palmW * 1.2, grd = ctx.createRadialGradient(h.center.x, h.center.y, 0, h.center.x, h.center.y, r);
+    grd.addColorStop(0, pal.glow + "55"); grd.addColorStop(1, "transparent");
     ctx.fillStyle = grd; ctx.beginPath(); ctx.arc(h.center.x, h.center.y, r, 0, TAU); ctx.fill();
-    ctx.fillStyle = "#fff";
-    for (const tip of [4, 8, 12, 16, 20]) { ctx.beginPath(); ctx.arc(h.px[tip].x, h.px[tip].y, Math.max(2, h.palmW * 0.05), 0, TAU); ctx.fill(); }
+    // skeleton bones — energy glow pass, then a bright core
+    ctx.globalAlpha = 0.45; ctx.strokeStyle = pal.a; ctx.lineWidth = lw * 2.2;
+    ctx.beginPath(); for (const [a, b] of HAND_BONES) { ctx.moveTo(px[a].x, px[a].y); ctx.lineTo(px[b].x, px[b].y); } ctx.stroke();
+    ctx.globalAlpha = 0.92; ctx.strokeStyle = "#fff"; ctx.lineWidth = Math.max(1, lw * 0.55);
+    ctx.beginPath(); for (const [a, b] of HAND_BONES) { ctx.moveTo(px[a].x, px[a].y); ctx.lineTo(px[b].x, px[b].y); } ctx.stroke();
+    // joints — glow + white core (fingertips a touch larger)
+    for (let i = 0; i < 21; i++) {
+      const jr = (TIPS.includes(i) ? lw * 0.95 : lw * 0.6);
+      ctx.globalAlpha = 0.55; ctx.fillStyle = pal.glow; ctx.beginPath(); ctx.arc(px[i].x, px[i].y, jr * 1.9, 0, TAU); ctx.fill();
+      ctx.globalAlpha = 1; ctx.fillStyle = "#fff"; ctx.beginPath(); ctx.arc(px[i].x, px[i].y, jr, 0, TAU); ctx.fill();
+    }
   }
-  ctx.restore();
+  ctx.globalAlpha = 1; ctx.restore();
 }
 
 /* ---------- versus ---------- */

@@ -348,6 +348,19 @@ h2{font-family:var(--cond);letter-spacing:.04em;font-weight:400;font-size:1.9rem
 /* combo flourish */
 .combo{filter:drop-shadow(0 2px 10px var(--acc))}
 
+/* ===== character select polish ===== */
+.char-card .sticker::after{content:"";position:absolute;left:0;right:0;top:0;height:3px;z-index:4;
+  background:linear-gradient(90deg,transparent,var(--accent),transparent);opacity:0;transition:opacity .3s}
+.char-card.sel .sticker::after{opacity:1}
+.char-card.sel .art-wrap::after{background:
+  linear-gradient(180deg,transparent 32%,rgba(7,8,13,.45) 62%,rgba(7,8,13,.97)),
+  linear-gradient(115deg,transparent 42%,rgba(255,255,255,.16) 50%,transparent 58%);
+  background-size:100% 100%,260% 100%;background-repeat:no-repeat;animation:cardShine 4.5s ease-in-out infinite}
+@keyframes cardShine{0%,58%{background-position:0 0,260% 0}82%,100%{background-position:0 0,-140% 0}}
+.char-card .cname{position:relative}
+.char-card.sel .cname::after{content:"";position:absolute;left:0;bottom:-4px;height:2px;width:40px;background:var(--accent);border-radius:2px}
+@media (prefers-reduced-motion:reduce){.char-card.sel .art-wrap::after{animation:none}}
+
 @media (prefers-reduced-motion:reduce){
   .cast-prompt .cp-ico,.release-btn.show{animation:none}
 }

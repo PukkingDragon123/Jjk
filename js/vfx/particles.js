@@ -87,6 +87,14 @@ export class ParticleSystem {
   flame(x, y, color, glow = 1.2, n = 3) {
     for (let i = 0; i < n; i++) this.spawn({ x: x + rand(-9, 9), y: y + rand(-4, 6), vx: rand(-0.7, 0.7), vy: rand(-3.4, -1.7), life: rand(0.35, 0.65), size: rand(3, 6), grow: -0.05, color, glow, shape: "dot", drag: 0.9, grav: -0.05 });
   }
+  // cursed-energy flame licking off a hand: hot white-ish core + coloured body, rising & flickering
+  handFlame(x, y, col, hot, n = 1) {
+    for (let i = 0; i < n; i++) {
+      const isHot = Math.random() < 0.45;
+      this.spawn({ x: x + rand(-6, 6), y: y + rand(-5, 4), vx: rand(-0.6, 0.6), vy: rand(-3.9, -2.0),
+        life: rand(0.26, 0.54), size: rand(3, 7), grow: rand(-0.18, -0.05), color: isHot ? hot : col, glow: 1.35, shape: "dot", drag: 0.9, grav: -0.07 });
+    }
+  }
   shards(x, y, color, glow, n = 14, power = 10) {
     for (let i = 0; i < n; i++) { const a = rand(0, TAU), s = rand(power * 0.4, power); this.spawn({ x, y, vx: Math.cos(a) * s, vy: Math.sin(a) * s, life: rand(0.5, 1), size: rand(5, 11), color, glow, shape: "shard", angle: a, spin: rand(-0.3, 0.3), grav: 0.15, drag: 0.96 }); }
   }

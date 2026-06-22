@@ -68,7 +68,8 @@ export class GestureEngine {
     let raws = null;
     if (hands.length >= 2) {
       const [a, b] = hands; const d = dist(a.center, b.center) / ((a.palmW + b.palmW) / 2);
-      if (a.open && b.open && d < 4) raws = "double"; else if (d < 2.0) raws = "pray";
+      if (d < 1.45) raws = "pray";                              // hands clasped together
+      else if (a.open && b.open && d < 5.5) raws = "double";    // two open palms, held apart
     }
     if (!raws) raws = singleSign(hands[0]);
 
@@ -80,7 +81,7 @@ export class GestureEngine {
     out.sign = sign;
 
     if (sign && sign === this.holdSign) { this.holdT += dt; this.nullT = 0; }
-    else if (sign == null) { this.nullT += dt; if (this.nullT > 0.14) { this.holdSign = null; this.holdT = 0; this.committed = false; } }
+    else if (sign == null) { this.nullT += dt; if (this.nullT > 0.22) { this.holdSign = null; this.holdT = 0; this.committed = false; } }
     else { this.holdSign = sign; this.holdT = 0; this.committed = false; this.nullT = 0; }
 
     if (this.holdSign && !this.committed) {
